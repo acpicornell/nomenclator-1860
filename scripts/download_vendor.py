@@ -97,5 +97,15 @@ def fetch_esm(npm_path: str, local_name: str | None = None) -> None:
 
 fetch_esm(f"/npm/@duckdb/duckdb-wasm@{DV}/+esm", "duckdb-wasm.mjs")
 
+# === Vega + Vega-Lite + Vega-Embed (UMD bundles, ~1 MB total) ===
+# Used by the "Gràfiques" tab. UMD bundles are easier than ESM here
+# because vega-embed wraps the other two and exposes a single global.
+get("https://cdn.jsdelivr.net/npm/vega@5.30.0/build/vega.min.js",
+    VENDOR / "vega.min.js")
+get("https://cdn.jsdelivr.net/npm/vega-lite@5.21.0/build/vega-lite.min.js",
+    VENDOR / "vega-lite.min.js")
+get("https://cdn.jsdelivr.net/npm/vega-embed@6.26.0/build/vega-embed.min.js",
+    VENDOR / "vega-embed.min.js")
+
 print("\nDone. web/vendor/ contains every required library.")
 print(f"Total: {sum(p.stat().st_size for p in VENDOR.rglob('*') if p.is_file()) / (1024*1024):.1f} MB")

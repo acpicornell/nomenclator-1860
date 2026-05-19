@@ -445,6 +445,279 @@ function renderSimpleTable(id, headers, rows, rowFn) {
   `;
 }
 
+// === CHARTS (Vega-Lite) ===
+// Carrega les 5 gràfiques de la pestanya Gràfiques. Es crida una sola
+// vegada per sessió (`_chartsLoaded` flag) per no repetir queries cares.
+let _chartsLoaded = false;
+
+const VEGA_THEME = {
+  config: {
+    font: "system-ui, sans-serif",
+    background: null,
+    view: { stroke: null },
+    axis: { labelFontSize: 11, titleFontSize: 12, labelColor: "#3d3022",
+            titleColor: "#3d3022", gridColor: "#e5dccf" },
+    legend: { labelFontSize: 11, titleFontSize: 12 },
+    title: { fontSize: 13, color: "#5e2620" },
+    range: { category: ["#5e2620","#a04f3c","#c98455","#7c8c6e","#3d5a3d",
+                        "#8b6b4f","#b8a07c","#4a6d8a","#6b4561","#8c8c5e"] },
+  }
+};
+
+async function loadCharts() {
+  if (_chartsLoaded) return;
+  _chartsLoaded = true;
+  try {
+    await Promise.all([
+      chartClasses(),
+      chartOccupancy(),
+      chartDistance(),
+      chartPareto(),
+      chartToponymRoots(),
+    ]);
+  } catch (err) {
+    console.error("Error carregant gràfiques:", err);
+  }
+}
+
+// 1. Donut de classes d'edifici (top 10 + altres)
+async function chartClasses() {
+  const rows = await query(`
+    WITH ranked AS (
+      SELECT class_normalized AS cls, COUNT(*) AS n,
+             ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS rk
+      FROM entries
+      WHERE NOT is_municipality_total AND NOT is_district_total
+        AND class_normalized IS NOT NULL
+      GROUP BY 1
+    )
+    SELECT cls, n FROM ranked WHERE rk <= 10
+    UNION ALL
+    SELECT 'altres' AS cls, SUM(n) FROM ranked WHERE rk > 10
+  `);
+  const spec = {
+    ...VEGA_THEME,
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: "container",
+    height: 360,
+    data: { values: rows },
+    mark: { type: "arc", innerRadius: 80, stroke: "#fdf8f1", strokeWidth: 2 },
+    encoding: {
+      theta: { field: "n", type: "quantitative", stack: true },
+      color: { field: "cls", type: "nominal", title: "Classe",
+               sort: { field: "n", order: "descending" },
+               legend: { orient: "right", labelLimit: 220 } },
+      tooltip: [
+        { field: "cls", type: "nominal", title: "Classe" },
+        { field: "n", type: "quantitative", title: "Files", format: "," },
+      ],
+    },
+  };
+  await vegaEmbed("#chart-classes", spec, { actions: false });
+}
+
+// 2. Barres apilades normalitzades HC/HT/Inh per partit
+async function chartOccupancy() {
+  const rows = await query(`
+    WITH d AS (
+      SELECT judicial_district,
+             CAST(SUM(inhabited_permanent) AS BIGINT) AS hc,
+             CAST(SUM(inhabited_seasonal) AS BIGINT) AS ht,
+             CAST(SUM(uninhabited) AS BIGINT) AS inh
+      FROM entries
+      WHERE NOT is_municipality_total AND NOT is_district_total
+      GROUP BY 1
+    )
+    SELECT judicial_district AS partit, 'Habitats constantment' AS tipus, hc AS valor FROM d
+    UNION ALL SELECT judicial_district, 'Habitats temporalment', ht FROM d
+    UNION ALL SELECT judicial_district, 'Inhabitats', inh FROM d
+  `);
+  const spec = {
+    ...VEGA_THEME,
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: "container",
+    height: 320,
+    data: { values: rows },
+    mark: { type: "bar", stroke: "#fdf8f1", strokeWidth: 1 },
+    encoding: {
+      x: { field: "partit", type: "nominal", title: null,
+           sort: ["Ibiza","Inca","Mahon","Manacor","Palma"] },
+      y: { field: "valor", type: "quantitative", stack: "normalize",
+           title: "% d'edificis", axis: { format: "%" } },
+      color: { field: "tipus", type: "nominal", title: null,
+               scale: { domain: ["Habitats constantment","Habitats temporalment","Inhabitats"],
+                        range: ["#3d5a3d","#c98455","#8b6b4f"] },
+               legend: { orient: "top" } },
+      tooltip: [
+        { field: "partit", type: "nominal", title: "Partit" },
+        { field: "tipus", type: "nominal", title: "Tipus" },
+        { field: "valor", type: "quantitative", title: "Edificis", format: "," },
+      ],
+    },
+  };
+  await vegaEmbed("#chart-occupancy", spec, { actions: false });
+}
+
+// 3. Boxplot distance_km per classe (top 8 classes amb >= 30 files i km no-NULL)
+async function chartDistance() {
+  const rows = await query(`
+    WITH top_classes AS (
+      SELECT class_normalized, COUNT(*) AS n
+      FROM entries
+      WHERE NOT is_municipality_total AND NOT is_district_total
+        AND class_normalized IS NOT NULL AND distance_km IS NOT NULL
+      GROUP BY 1 HAVING COUNT(*) >= 30
+      ORDER BY 2 DESC LIMIT 8
+    )
+    SELECT e.class_normalized AS cls, e.distance_km AS km
+    FROM entries e
+    WHERE NOT e.is_municipality_total AND NOT e.is_district_total
+      AND e.distance_km IS NOT NULL
+      AND e.class_normalized IN (SELECT class_normalized FROM top_classes)
+  `);
+  // Mediana per ordenar
+  const med = {};
+  const grp = {};
+  for (const r of rows) {
+    if (!grp[r.cls]) grp[r.cls] = [];
+    grp[r.cls].push(r.km);
+  }
+  for (const c in grp) {
+    const arr = grp[c].slice().sort((a,b) => a-b);
+    med[c] = arr[Math.floor(arr.length/2)];
+  }
+  const order = Object.keys(med).sort((a,b) => med[a] - med[b]);
+  const spec = {
+    ...VEGA_THEME,
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: "container",
+    height: 340,
+    data: { values: rows },
+    mark: { type: "boxplot", size: 18, color: "#a04f3c",
+            outliers: { color: "#5e2620", opacity: 0.4, size: 18 } },
+    encoding: {
+      x: { field: "km", type: "quantitative", title: "Distància al nucli (km)",
+           scale: { domainMin: 0 } },
+      y: { field: "cls", type: "nominal", title: null, sort: order },
+      tooltip: [
+        { field: "cls", type: "nominal", title: "Classe" },
+        { field: "km", type: "quantitative", title: "km", format: ".1f" },
+      ],
+    },
+  };
+  await vegaEmbed("#chart-distance", spec, { actions: false });
+}
+
+// 4. Pareto: % acumulat d'edificis vs ranking de topònim
+async function chartPareto() {
+  const rows = await query(`
+    WITH r AS (
+      SELECT place, municipality, total,
+             ROW_NUMBER() OVER (ORDER BY total DESC) AS rk,
+             SUM(total) OVER (ORDER BY total DESC ROWS UNBOUNDED PRECEDING) AS cum
+      FROM entries
+      WHERE NOT is_municipality_total AND NOT is_district_total
+        AND total IS NOT NULL AND total > 0
+    ),
+    total AS (SELECT SUM(total) AS t FROM r WHERE rk=rk)
+    SELECT r.rk, r.place, r.municipality, r.total,
+           100.0 * r.rk / (SELECT MAX(rk) FROM r) AS pct_places,
+           100.0 * r.cum / (SELECT MAX(cum) FROM r) AS pct_buildings
+    FROM r
+    ORDER BY rk
+  `);
+  const spec = {
+    ...VEGA_THEME,
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: "container",
+    height: 320,
+    data: { values: rows },
+    layer: [
+      {
+        mark: { type: "line", color: "#5e2620", strokeWidth: 2 },
+        encoding: {
+          x: { field: "pct_places", type: "quantitative",
+               title: "% de topònims (ordenats per mida descendent)",
+               axis: { format: ".0f", values: [0,10,20,30,40,50,60,70,80,90,100] } },
+          y: { field: "pct_buildings", type: "quantitative",
+               title: "% acumulat d'edificis",
+               axis: { format: ".0f", values: [0,10,20,30,40,50,60,70,80,90,100] } },
+        },
+      },
+      {
+        mark: { type: "rule", color: "#a04f3c", strokeDash: [4,4], opacity: 0.7 },
+        data: { values: [{ x: 20 }] },
+        encoding: { x: { field: "x", type: "quantitative" } },
+      },
+      {
+        mark: { type: "rule", color: "#a04f3c", strokeDash: [4,4], opacity: 0.7 },
+        data: { values: [{ y: 80 }] },
+        encoding: { y: { field: "y", type: "quantitative" } },
+      },
+    ],
+  };
+  await vegaEmbed("#chart-pareto", spec, { actions: false });
+}
+
+// 5. Top arrels toponímiques amb LIKE sobre place
+async function chartToponymRoots() {
+  // Patrons triats segons frequencies reals al dataset (verificats amb
+  // split_part(place, ' ', 1)). LIKE és més fiable que regex_matches per
+  // a textos curts amb accents i apostrofs.
+  const rows = await query(`
+    SELECT root, COUNT(*) AS n
+    FROM (
+      SELECT CASE
+        WHEN place LIKE 'Son %' OR place LIKE 'Son-%' THEN 'Son'
+        WHEN place LIKE 'Ca''n %' OR place LIKE 'Ca na %' OR place LIKE 'Ca''s %'
+          OR place LIKE 'Ca''l %' OR place LIKE 'Ca de %' THEN 'Ca''n / Ca''s / Ca na'
+        WHEN place LIKE 'Molí%' OR place LIKE 'Molino%' OR place LIKE 'Molins%' THEN 'Molí / Molins'
+        WHEN place LIKE 'Sant %' OR place LIKE 'Santa %' OR place LIKE 'San %' THEN 'Sant / Santa / San'
+        WHEN place LIKE 'Venda %' OR place LIKE 'Venda d%' THEN 'Venda (eivissenc)'
+        WHEN place LIKE 'Hort %' OR place LIKE 'Hort d%' OR place LIKE 'Horta%' THEN 'Hort / Horta'
+        WHEN place LIKE 'Casetas %' OR place LIKE 'Casetas d%' THEN 'Casetas (de labradors)'
+        WHEN place LIKE 'Torre %' OR place LIKE 'Torre d%' OR place LIKE 'Torret%' THEN 'Torre / Torret'
+        WHEN place LIKE 'Rafal %' OR place LIKE 'Rafal-%' OR place LIKE 'Rafal''%' THEN 'Rafal'
+        WHEN place LIKE 'Alquería%' THEN 'Alqueria'
+        WHEN place LIKE 'Camp %' OR place LIKE 'Camp d%' THEN 'Camp'
+        WHEN place LIKE 'Pl_ %' OR place LIKE 'Pl_ d%' THEN 'Plá / Pla'
+        WHEN place LIKE 'Coll %' OR place LIKE 'Coll d%' THEN 'Coll'
+        WHEN place LIKE 'Coma %' OR place LIKE 'Coma d%' THEN 'Coma'
+        WHEN place LIKE 'P_ig%' OR place LIKE 'Pújig%' THEN 'Puig / Púig'
+        WHEN place LIKE 'Pujol%' THEN 'Pujol'
+        WHEN place LIKE 'Sementeri%' THEN 'Sementeri'
+        WHEN place LIKE 'Costa %' OR place LIKE 'Costa d%' THEN 'Costa'
+        WHEN place LIKE 'Taulera%' THEN 'Taulera'
+        ELSE NULL
+      END AS root
+      FROM entries
+      WHERE NOT is_municipality_total AND NOT is_district_total
+        AND place IS NOT NULL
+    )
+    WHERE root IS NOT NULL
+    GROUP BY 1 ORDER BY 2 DESC
+  `);
+  const spec = {
+    ...VEGA_THEME,
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: "container",
+    height: 360,
+    data: { values: rows },
+    mark: { type: "bar", color: "#5e2620" },
+    encoding: {
+      y: { field: "root", type: "nominal", title: null,
+           sort: { field: "n", order: "descending" } },
+      x: { field: "n", type: "quantitative", title: "Topònims",
+           axis: { format: "," } },
+      tooltip: [
+        { field: "root", type: "nominal", title: "Arrel" },
+        { field: "n", type: "quantitative", title: "Topònims", format: "," },
+      ],
+    },
+  };
+  await vegaEmbed("#chart-roots", spec, { actions: false });
+}
+
 // === SQL CONSOLE ===
 async function runSql() {
   const sql = document.getElementById("sql-input").value.trim();
@@ -595,6 +868,7 @@ function switchTopTab(top) {
     s.classList.toggle("active", s.dataset.toptab === top);
   });
   if (top === "stats") loadStats();
+  if (top === "charts") loadCharts();
   syncUrlFromState();
 }
 

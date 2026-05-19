@@ -885,3 +885,30 @@ footer p { margin: 0; }
   font-size: 0.85em;
   color: var(--text-muted);
 }
+
+/* === CHARTS (Vega-Lite) === */
+.chart-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.5em 1.5em 1.8em;
+  margin-bottom: 1.6em;
+}
+.chart-block h2 {
+  margin: 0 0 0.4em;
+  font-family: Georgia, serif;
+  font-size: 1.15em;
+  color: var(--accent-dark);
+}
+.chart-intro {
+  margin: 0 0 1.2em;
+  color: var(--text-muted);
+  font-size: 0.9em;
+  line-height: 1.55;
+}
+.vega-chart {
+  width: 100%;
+  min-height: 260px;
+  overflow-x: auto;
+}
+.vega-chart svg { max-width: 100%; height: auto; }

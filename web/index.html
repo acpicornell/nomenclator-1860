@@ -19,6 +19,7 @@
   <button class="tab active" data-toptab="home">Inici</button>
   <button class="tab" data-toptab="explore">Explorar</button>
   <button class="tab" data-toptab="stats">Estadístiques</button>
+  <button class="tab" data-toptab="charts">Gràfiques</button>
   <button class="tab" data-toptab="glossary">Glossari</button>
   <button class="tab" data-toptab="sql">Consola SQL</button>
 </nav>
@@ -212,6 +213,69 @@
   </div>
 </section>
 
+<!-- ===== CHARTS ===== -->
+<section id="tab-charts" class="tab-content" data-toptab="charts">
+  <p class="section-intro">
+    Cinc lectures visuals del cens de 1860. Tots els gràfics es generen en
+    temps real al navegador amb DuckDB-WASM + Vega-Lite a partir dels
+    parquets reals — pots fer click sobre les llegendes i fer hover sobre
+    els elements.
+  </p>
+
+  <article class="chart-block">
+    <h2>1 · Composició de classes d'edificis</h2>
+    <p class="chart-intro">
+      Donut de les 10 classes més freqüents més una categoria <em>«altres»</em>.
+      Mostra immediatament que el cens està dominat per <strong>Caserío</strong>,
+      <strong>Predio (casa de labranza)</strong> i <strong>Casa de labor</strong>,
+      les tres entitats agrícoles rurals.
+    </p>
+    <div id="chart-classes" class="vega-chart"></div>
+  </article>
+
+  <article class="chart-block">
+    <h2>2 · Habitació constant vs estacional per partit judicial</h2>
+    <p class="chart-intro">
+      Barres apilades normalitzades amb el % d'edificis habitats permanentment
+      (HC), temporalment (HT) i inhabitats (Inh) a cada partit. Revela
+      diferències territorials de patró d'ocupació.
+    </p>
+    <div id="chart-occupancy" class="vega-chart"></div>
+  </article>
+
+  <article class="chart-block">
+    <h2>3 · Distància al nucli per classe d'edifici</h2>
+    <p class="chart-intro">
+      Boxplot mostrant la distribució (mediana, quartils, atípics) de la distància
+      en quilòmetres al centre del municipi per les classes més comunes. Conta
+      com les estructures rurals (<em>predios</em>, <em>caseríos</em>) viuen
+      lluny del nucli, mentre que ciutats i albergs estan més a prop.
+    </p>
+    <div id="chart-distance" class="vega-chart"></div>
+  </article>
+
+  <article class="chart-block">
+    <h2>4 · Corba de Pareto — concentració d'edificis</h2>
+    <p class="chart-intro">
+      Quin percentatge dels topònims acumula quin percentatge dels edificis?
+      Una corba ràpida ens diu que els pobles grans (Palma, Sóller, Maó…)
+      són minoritaris en nombre però dominen el cens en volum.
+    </p>
+    <div id="chart-pareto" class="vega-chart"></div>
+  </article>
+
+  <article class="chart-block">
+    <h2>5 · Arrels toponímiques més freqüents</h2>
+    <p class="chart-intro">
+      Quins prefixos lingüístics dominen la toponímia balear del 1860?
+      <code>Ca'n / Ca na</code>, <code>Son</code>, <code>Sa / Es</code>,
+      <code>Hort / Horta</code>, <code>Molí</code>, <code>Torre</code>… cada
+      un revela un episodi de la història i del paisatge balear.
+    </p>
+    <div id="chart-roots" class="vega-chart"></div>
+  </article>
+</section>
+
 <!-- ===== GLOSSARY ===== -->
 <section id="tab-glossary" class="tab-content" data-toptab="glossary">
   <div class="glos-grid">
@@ -352,6 +416,9 @@ LIMIT 25</textarea>
   </p>
 </footer>
 
-<script type="module" src="app.js?v=3"></script>
+<script src="vendor/vega.min.js"></script>
+<script src="vendor/vega-lite.min.js"></script>
+<script src="vendor/vega-embed.min.js"></script>
+<script type="module" src="app.js?v=4"></script>
 </body>
 </html>
