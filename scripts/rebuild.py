@@ -11,12 +11,12 @@
         Inclou la re-extracció amb Claude vision (~10 USD). Cal
         ANTHROPIC_API_KEY a .env.
 
-    .venv/bin/python scripts/rebuild.py --parquet
-        Només re-exportar els parquets de web/data/ (no toca la BD).
+    .venv/bin/python scripts/rebuild.py --json
+        Només re-exportar els JSON estàtics a web/data/ (no toca la BD).
 
     .venv/bin/python scripts/rebuild.py --seed
         Només estampar source_metadata amb l'estat actual i re-exportar
-        parquets. Útil quan la BD ja és bona però volem refrescar la
+        els JSON. Útil quan la BD ja és bona però volem refrescar la
         marca "actualitzat fa X".
 """
 from __future__ import annotations
@@ -34,7 +34,6 @@ import duckdb
 PROJECT = Path(__file__).resolve().parent.parent
 DB = PROJECT / "db" / "nomenclator.duckdb"
 SCHEMA = PROJECT / "db" / "schema.sql"
-PARQUET_DIR = PROJECT / "web" / "data"
 PYTHON = str(PROJECT / ".venv" / "bin" / "python")
 
 
@@ -51,15 +50,6 @@ STEPS: list[tuple[str, list[str], bool]] = [
 ]
 
 NOTES = "PDF INE 1860 + Claude vision; 100% coherència aritmètica"
-
-# Re-export Parquet: cada taula amb el seu filtre opcional.
-PARQUET_EXPORTS: list[tuple[str, str]] = [
-    ("entries", "WHERE page != 50"),   # la pàg. 50 són els quadres-resum
-    ("notes", ""),
-    ("summaries", ""),
-    ("errata", ""),
-    ("source_metadata", ""),
-]
 
 
 def _ensure_schema() -> None:
@@ -82,9 +72,8 @@ def _run_step(script_rel: str, args: list[str]) -> None:
 def _write_metadata(scripts_ran: list[str]) -> int:
     """Stamp source_metadata amb el row count actual i els scripts executats.
 
-    Important: emmagatzemem el timestamp en UTC explícit (naïve) perquè
-    DuckDB-WASM, al llegir-lo amb EPOCH_MS al navegador, l'interpreti
-    com a UTC.
+    El timestamp s'emmagatzema en UTC explícit (naïve); export_json.py
+    el serialitza com a ISO 8601 i el navegador el parseja amb `new Date()`.
     """
     con = duckdb.connect(str(DB))
     n = con.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
@@ -99,28 +88,12 @@ def _write_metadata(scripts_ran: list[str]) -> int:
     return n
 
 
-def _export_parquets() -> None:
-    PARQUET_DIR.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(DB), read_only=True)
-    for table, where in PARQUET_EXPORTS:
-        exists = con.execute(
-            "SELECT 1 FROM information_schema.tables "
-            "WHERE table_schema='main' AND table_name=?",
-            [table],
-        ).fetchone()
-        if not exists:
-            print(f"  ◌ {table}: taula no existeix, saltada")
-            continue
-        out = PARQUET_DIR / f"{table}.parquet"
-        sql_inner = f"SELECT * FROM {table} {where}".strip()
-        con.execute(
-            f"COPY ({sql_inner}) TO '{out}' "
-            f"(FORMAT PARQUET, COMPRESSION ZSTD)"
-        )
-        n = con.execute(f"SELECT COUNT(*) FROM ({sql_inner})").fetchone()[0]
-        kb = out.stat().st_size // 1024
-        print(f"  ✓ {table}.parquet  {n:>6} files · {kb:>5} KB")
-    con.close()
+def _export_json() -> None:
+    """Delega a scripts/export_json.py — converteix DuckDB → JSON."""
+    cmd = [PYTHON, str(PROJECT / "scripts" / "export_json.py")]
+    r = subprocess.run(cmd, cwd=PROJECT)
+    if r.returncode != 0:
+        raise SystemExit(f"FAIL: export_json.py (codi {r.returncode})")
 
 
 def run_all(include_expensive: bool) -> None:
@@ -154,8 +127,8 @@ def main() -> int:
         description="Orquestrador per a reconstruir la BD del Nomenclàtor 1860"
     )
     p.add_argument(
-        "--parquet", action="store_true",
-        help="Només re-exportar parquets (no toca la BD)",
+        "--json", action="store_true",
+        help="Només re-exportar JSON estàtics a web/data/ (no toca la BD)",
     )
     p.add_argument(
         "--seed", action="store_true",
@@ -169,20 +142,20 @@ def main() -> int:
 
     _ensure_schema()
 
-    if args.parquet:
-        print("=== Re-exportant Parquet ===")
-        _export_parquets()
+    if args.json:
+        print("=== Re-exportant JSON ===")
+        _export_json()
         return 0
 
     if args.seed:
         seed_metadata()
-        print("\n=== Re-exportant Parquet ===")
-        _export_parquets()
+        print("\n=== Re-exportant JSON ===")
+        _export_json()
         return 0
 
     run_all(args.include_expensive)
-    print("\n=== Re-exportant Parquet ===")
-    _export_parquets()
+    print("\n=== Re-exportant JSON ===")
+    _export_json()
     return 0
 
 

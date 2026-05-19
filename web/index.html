@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Nomenclàtor de les Illes Balears · 1860</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -21,7 +21,6 @@
   <button class="tab" data-toptab="stats">Estadístiques</button>
   <button class="tab" data-toptab="charts">Gràfiques</button>
   <button class="tab" data-toptab="glossary">Glossari</button>
-  <button class="tab" data-toptab="sql">Consola SQL</button>
 </nav>
 
 
@@ -58,7 +57,7 @@
 
   <div class="home-actions">
     <button class="home-action" data-goto="explore"><strong>Explorar →</strong><span>Filtrar les ~3.000 entrades per partit, municipi, classe i distància.</span></button>
-    <button class="home-action" data-goto="sql"><strong>Consola SQL →</strong><span>DuckDB lliure contra les taules <code>entries</code>, <code>notes</code>, <code>summaries</code> i <code>errata</code> al navegador.</span></button>
+    <button class="home-action" data-goto="charts"><strong>Gràfiques →</strong><span>Sis visualitzacions interactives: classes, ocupació, distàncies, Pareto, arrels toponímiques i arquitectura.</span></button>
   </div>
 
   <div class="home-prose">
@@ -72,9 +71,10 @@
       <strong>Manacor</strong> (est de Mallorca) i <strong>Palma</strong> (oest i capital).
     </p>
     <p>
-      <strong>Codi:</strong> AGPL-3.0. Motor <a href="https://duckdb.org/docs/api/wasm" target="_blank">DuckDB-WASM</a>
-      corrent 100% al navegador (sense servidor). Vegeu <code>data/SOURCES.md</code> per la procedència
-      i atribució completa.
+      <strong>Codi:</strong> AGPL-3.0. Pur HTML + JavaScript + JSON estàtic
+      (sense servidor, sense base de dades al runtime); les visualitzacions
+      s'animen amb <a href="https://vega.github.io/vega-lite/" target="_blank">Vega-Lite</a>.
+      Vegeu <code>data/SOURCES.md</code> per la procedència i atribució completa.
     </p>
   </div>
 </section>
@@ -157,7 +157,7 @@
           </tr>
         </thead>
         <tbody id="tbody-results">
-          <tr><td colspan="14" class="empty">Carregant DuckDB-WASM…</td></tr>
+          <tr><td colspan="14" class="empty">Carregant dades…</td></tr>
         </tbody>
       </table>
     </div>
@@ -216,10 +216,9 @@
 <!-- ===== CHARTS ===== -->
 <section id="tab-charts" class="tab-content" data-toptab="charts">
   <p class="section-intro">
-    Cinc lectures visuals del cens de 1860. Tots els gràfics es generen en
-    temps real al navegador amb DuckDB-WASM + Vega-Lite a partir dels
-    parquets reals — pots fer click sobre les llegendes i fer hover sobre
-    els elements.
+    Sis lectures visuals del cens de 1860. Totes les gràfiques es generen en
+    temps real al navegador amb Vega-Lite a partir dels JSON estàtics — pots
+    fer click sobre les llegendes i fer hover sobre els elements.
   </p>
 
   <article class="chart-block">
@@ -421,44 +420,23 @@
   </div>
 </section>
 
-<!-- ===== SQL ===== -->
-<section id="tab-sql" class="tab-content" data-toptab="sql">
-  <div class="sql-help">
-    <p>
-      Consulta SQL lliure contra la BD DuckDB al teu navegador.
-      Taules: <code>entries</code> (dades principals), <code>notes</code>, <code>summaries</code>, <code>errata</code>.
-      Exemples:
-    </p>
-    <ul>
-      <li><code>SELECT place, total FROM entries WHERE municipality='ARTÁ' ORDER BY total DESC</code></li>
-      <li><code>SELECT place_class, COUNT(*) FROM entries GROUP BY 1 ORDER BY 2 DESC</code></li>
-      <li><code>SELECT * FROM entries WHERE place LIKE 'Molí%' LIMIT 50</code></li>
-    </ul>
-  </div>
-  <textarea id="sql-input" placeholder="SELECT * FROM entries LIMIT 10">SELECT place, place_class, distance_km, total
-FROM entries
-WHERE municipality = 'PALMA' AND NOT is_municipality_total
-ORDER BY total DESC
-LIMIT 25</textarea>
-  <div class="sql-controls">
-    <button id="btn-sql-run">Executar (Ctrl+Enter)</button>
-    <span id="sql-status"></span>
-  </div>
-  <div class="table-wrap">
-    <table id="t-sql-result"></table>
-  </div>
-</section>
-
 <footer>
-  <p>
-    AGPL-3.0 ·
-    <a href="https://duckdb.org/docs/api/wasm" target="_blank">DuckDB-WASM</a>
-  </p>
+  Generat a partir del facsímil INE del <em>Nomenclátor de la Provincia de las Baleares</em> (cens del 25 de desembre de 1860, Junta General d'Estadística).
+  Llicència del codi: AGPL-3.0.
+  Dades originals (1860): domini públic.
+  <div class="footer-repo">
+    <a class="repo-link" href="https://github.com/acpicornell/nomenclator-1860" target="_blank" rel="noopener" aria-label="Repositori a GitHub">
+      <svg class="repo-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      Codi al repositori
+    </a>
+  </div>
 </footer>
 
 <script src="vendor/vega.min.js"></script>
 <script src="vendor/vega-lite.min.js"></script>
 <script src="vendor/vega-embed.min.js"></script>
-<script type="module" src="app.js?v=9"></script>
+<script type="module" src="app.js?v=11"></script>
 </body>
 </html>

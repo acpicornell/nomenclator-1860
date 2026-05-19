@@ -1,0 +1,1 @@
+[{"source_name":"1860","fetched_at":"2026-05-14T17:17:39.737496","n_rows":3026,"scripts":"scripts/extract_with_claude.py, scripts/load_claude_output.py, db/validate.py, db/validate_rows.py, scripts/auto_fix.py, scripts/auto_fix_2.py, scripts/apply_errata_and_summaries.py","notes":"PDF INE 1860 + Claude vision; 100% coherència aritmètica"}]

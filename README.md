@@ -11,21 +11,24 @@ Cada poble balear declara els edificis per ús (habitats permanentment, temporal
 ## Arquitectura
 
 ```
-                  db/nomenclator.duckdb
+                  db/nomenclator.duckdb       (build-time, local)
                   ├─ entries          ← una fila per població/edifici
                   ├─ notes            ← notes a peu d'article
                   ├─ summaries        ← pàg. 50 (4 quadres-resum)
                   ├─ errata           ← pàg. 51 (fe d'errates)
                   └─ source_metadata  ← provenença
                          │
-                         ▼
-                  web/data/*.parquet  (ZSTD)
+                         ▼  scripts/export_json.py
+                  web/data/*.json    (~1.5 MB sense gzip, ~500 KB gzip)
                          │
                          ▼
-                  web/  ← SPA + DuckDB-WASM (local vendor/, offline-first)
+                  web/  ← HTML + JS pur + Vega-Lite (sense WASM)
 ```
 
-Els scripts d'extracció escriuen directament a DuckDB i el rebuild reexporta els Parquets. La marca temporal de `source_metadata` permet a la web mostrar "actualitzat fa N dies".
+La pipeline Python local fa servir DuckDB internament per a extracció,
+validació i ingesta, però l'**output final per al web és JSON estàtic**.
+El runtime web no necessita DuckDB-WASM ni cap altra base de dades: tot
+el filtrat i les agregacions es fan en JavaScript sobre arrays en memòria.
 
 ## Requisits
 
@@ -42,12 +45,12 @@ uv sync   # crea .venv amb tot
 
 ```bash
 .venv/bin/python scripts/rebuild.py             # tot, excepte vision (car)
-.venv/bin/python scripts/rebuild.py --parquet   # només re-exportar parquets
+.venv/bin/python scripts/rebuild.py --json      # només re-exportar JSON a web/data/
 .venv/bin/python scripts/rebuild.py --seed      # només estampar metadata
 .venv/bin/python scripts/rebuild.py --include-expensive   # amb Claude vision
 ```
 
-`rebuild.py` corre cada pas en l'ordre correcte, reporta timing i row counts, i actualitza `source_metadata`.
+`rebuild.py` corre cada pas en l'ordre correcte, reporta timing i row counts, i actualitza `source_metadata`. Al final delega a `scripts/export_json.py` per generar els JSON.
 
 ### Passos individuals (debug)
 
@@ -68,7 +71,7 @@ uv sync   # crea .venv amb tot
 .venv/bin/python scripts/apply_errata_and_summaries.py
 ```
 
-Quan re-exportis Parquets, recorda bumpar `DATA_V` a `web/app.js` perquè el navegador no serveixi una versió obsoleta.
+Quan re-exportis els JSON, recorda bumpar `DATA_V` a `web/app.js` perquè el navegador no serveixi una versió obsoleta.
 
 ## Web
 
@@ -76,16 +79,15 @@ Quan re-exportis Parquets, recorda bumpar `DATA_V` a `web/app.js` perquè el nav
 cd web && python3 -m http.server 8000
 ```
 
-Obrir <http://localhost:8000>. La pàgina ha de servir-se per HTTP (no `file://`): DuckDB-WASM carrega els Parquets via `fetch`. Pestanyes:
+Obrir <http://localhost:8000>. La pàgina ha de servir-se per HTTP (no `file://`) perquè els JSON es carreguen via `fetch`. Pestanyes:
 
 1. **Inici** — visió general amb estadístiques principals.
-2. **Nomenclàtor 1860** — explorador amb filtres (població, partit judicial, municipi, classe, distància) sobre una taula paginada i ordenable. Inclou:
-   - *Explorar* — filtres i taula
-   - *Estadístiques* — agregats per partit, classes més freqüents, distribució per plantes, més els 4 quadres-resum oficials
-   - *Glossari* — explicació de columnes, classes de població i convencions del text original
-3. **Consola SQL** — DuckDB lliure contra les taules.
+2. **Explorar** — filtres (població, partit judicial, municipi, classe, distància) sobre una taula paginada i ordenable, amb descàrrega CSV.
+3. **Estadístiques** — agregats per partit, classes més freqüents, distribució per plantes, més els 4 quadres-resum oficials de la pàg. 50.
+4. **Gràfiques** — sis visualitzacions Vega-Lite: donut de classes (filtrable per municipi), ocupació HC/HT/Inh per territori, boxplot de distàncies, Pareto d'edificis, arrels toponímiques i composició arquitectònica per plantes.
+5. **Glossari** — explicació de columnes, classes de població i convencions del text original.
 
-Tota la web és **offline-first**: les dependències (DuckDB-WASM, apache-arrow…) viuen a `web/vendor/` (~100 MB, reproduïble amb `scripts/download_vendor.py`).
+Tota la web és **estàtica** i 100% offline-first: l'única dependència de runtime és Vega-Lite (~800 KB a `web/vendor/`, reproduïble amb `scripts/download_vendor.py`).
 
 ## Schema
 
