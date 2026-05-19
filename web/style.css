@@ -912,3 +912,20 @@ footer p { margin: 0; }
   overflow-x: auto;
 }
 .vega-chart svg { max-width: 100%; height: auto; }
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0 0 1em;
+  font-size: 0.9em;
+}
+.chart-controls label { color: var(--text-muted); }
+.chart-controls select {
+  padding: 0.3em 0.6em;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: inherit;
+  min-width: 220px;
+}

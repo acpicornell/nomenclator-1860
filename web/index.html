@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Nomenclàtor de les Illes Balears · 1860</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -230,6 +230,12 @@
       <strong>Predio (casa de labranza)</strong> i <strong>Casa de labor</strong>,
       les tres entitats agrícoles rurals.
     </p>
+    <div class="chart-controls">
+      <label for="f-classes-muni">Municipi:</label>
+      <select id="f-classes-muni">
+        <option value="">— Tots els municipis —</option>
+      </select>
+    </div>
     <div id="chart-classes" class="vega-chart"></div>
   </article>
 
@@ -419,6 +425,6 @@ LIMIT 25</textarea>
 <script src="vendor/vega.min.js"></script>
 <script src="vendor/vega-lite.min.js"></script>
 <script src="vendor/vega-embed.min.js"></script>
-<script type="module" src="app.js?v=4"></script>
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>

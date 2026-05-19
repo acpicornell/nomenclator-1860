@@ -469,6 +469,7 @@ async function loadCharts() {
   _chartsLoaded = true;
   try {
     await Promise.all([
+      populateClassesMuniFilter(),
       chartClasses(),
       chartOccupancy(),
       chartDistance(),
@@ -480,8 +481,29 @@ async function loadCharts() {
   }
 }
 
-// 1. Donut de classes d'edifici (top 10 + altres)
-async function chartClasses() {
+// Pobla el select de municipis del gràfic 1 i lliga el handler
+async function populateClassesMuniFilter() {
+  const sel = document.getElementById("f-classes-muni");
+  if (!sel) return;
+  const munis = await query(`
+    SELECT municipality AS v FROM entries
+    WHERE NOT is_municipality_total AND NOT is_district_total
+      AND municipality IS NOT NULL AND municipality != 'SUMMARY'
+    GROUP BY 1 ORDER BY 1
+  `);
+  for (const m of munis) {
+    const opt = document.createElement("option");
+    opt.value = m.v;
+    opt.textContent = m.v;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener("change", () => chartClasses(sel.value));
+}
+
+// 1. Donut de classes d'edifici (top 10 + altres), opcionalment filtrat per municipi
+async function chartClasses(municipality = "") {
+  const whereExtra = municipality ? "AND municipality = ?" : "";
+  const params = municipality ? [municipality] : [];
   const rows = await query(`
     WITH ranked AS (
       SELECT class_normalized AS cls, COUNT(*) AS n,
@@ -489,18 +511,21 @@ async function chartClasses() {
       FROM entries
       WHERE NOT is_municipality_total AND NOT is_district_total
         AND class_normalized IS NOT NULL
+        ${whereExtra}
       GROUP BY 1
     )
     SELECT cls, n FROM ranked WHERE rk <= 10
     UNION ALL
     SELECT 'altres' AS cls, SUM(n) FROM ranked WHERE rk > 10
-  `);
+  `, params);
+  // Si el municipi seleccionat té <= 10 classes, no afegim la fila 'altres'
+  const filtered = rows.filter(r => !(r.cls === "altres" && (r.n == null || r.n === 0)));
   const spec = {
     ...VEGA_THEME,
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: 360,
-    data: { values: rows },
+    data: { values: filtered },
     mark: { type: "arc", innerRadius: 80, stroke: "#fdf8f1", strokeWidth: 2 },
     encoding: {
       theta: { field: "n", type: "quantitative", stack: true },
