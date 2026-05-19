@@ -1,0 +1,42 @@
+# Cloudflare Pages/Workers headers config. One rule per block, path +
+# indented header lines. Glob '*' supported.
+#
+# Strategy: 'no-store' on every asset. El navegador no escriu mai la
+# resposta a disc i el bfcache es salta, així una recàrrega plana (o
+# fins i tot navegació endavant/enrere) sempre fa fetch del deploy més
+# recent. Trade-off vs. 'max-age=0, must-revalidate': perdem el 304
+# short circuit, així cada visita rebaixa tot el payload. El site és
+# petit (entries.json ~1.4 MB, vega ~800 KB, la resta <50 KB) i el
+# punt del projecte és veure dades fresques després d'un push, així
+# que el cost és acceptable.
+
+/*.html
+  Cache-Control: no-store
+
+/*.json
+  Cache-Control: no-store
+
+/*.js
+  Cache-Control: no-store
+
+/*.css
+  Cache-Control: no-store
+
+# Security headers — site read-only estàtic, sense auth, sense forms.
+#
+# CSP notes:
+# - script-src 'self' 'unsafe-eval' — Vega/Vega-Lite fan servir el
+#   constructor Function() per avaluar expressions dins els specs.
+#   Si treiem el 'unsafe-eval' les gràfiques no es renderitzen.
+# - style-src 'self' 'unsafe-inline' — Vega injecta estils inline al
+#   DOM per a tooltips i marques; también n'hi ha alguns dins
+#   index.html (status-bar de loading).
+# - img-src 'self' data: — Vega genera imatges PNG inline si l'usuari
+#   fa servir el botó d'exportació (tot i que actions:false el desactiva).
+# - els enllaços externs (github, vega.github.io, anthropic.com…) són
+#   navegacionals (<a href target=_blank>), no embedded resources.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
