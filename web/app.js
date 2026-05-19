@@ -31,9 +31,11 @@ let state = {
 };
 
 // === DATA LOAD ===
+// Sense cache-busting per query string: el servidor envia
+// Cache-Control: no-store (vegeu web/_headers), així el navegador
+// no guarda mai cap còpia local i sempre demana el deploy més recent.
 async function loadData() {
-  const DATA_V = "v=1";
-  const get = (name) => fetch(`data/${name}.json?${DATA_V}`).then(r => {
+  const get = (name) => fetch(`data/${name}.json`).then(r => {
     if (!r.ok) throw new Error(`HTTP ${r.status} loading ${name}.json`);
     return r.json();
   });
