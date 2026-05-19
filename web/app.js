@@ -484,7 +484,7 @@ async function runSql() {
 
 // === URL STATE (bookmarkable filters) ===
 const URL_TABS = {
-  "1860": {
+  explore: {
     ref: () => state,
     inputs: { place: "#f-place", km_min: "#f-km-min", km_max: "#f-km-max",
               include_totals: "#f-include-totals" },
@@ -510,10 +510,8 @@ function syncUrlFromState() {
     if (_applyingUrl) return;
     const top = document.querySelector("nav.tabs-main .tab.active")?.dataset.toptab;
     if (!top) return;
-    const sub = activeSubByTop[top] || null;
     const params = new URLSearchParams();
     params.set("t", top);
-    if (sub) params.set("u", sub);
     const conf = URL_TABS[top];
     if (conf) {
       const s = conf.ref();
@@ -546,11 +544,8 @@ async function applyStateFromUrl() {
   try {
     const params = new URLSearchParams(raw);
     const top = params.get("t") || "home";
-    const sub = params.get("u") || null;
 
     const conf = URL_TABS[top];
-
-    if (sub && top === "1860") activeSubByTop[top] = sub;
 
     if (conf?.ref) {
       const s = conf.ref();
@@ -576,7 +571,7 @@ async function applyStateFromUrl() {
       }
     }
 
-    if (top === "1860") {
+    if (top === "explore") {
       await refillMunicipalities();
       await refillClasses();
       await loadResults();
@@ -591,40 +586,15 @@ async function applyStateFromUrl() {
   }
 }
 
-// === TAB SWITCHING (two levels) ===
-const activeSubByTop = { "1860": "explore" };
-
+// === TAB SWITCHING ===
 function switchTopTab(top) {
   document.querySelectorAll("nav.tabs-main .tab").forEach(b =>
     b.classList.toggle("active", b.dataset.toptab === top)
   );
-  document.querySelectorAll("nav.tabs-sub").forEach(nav => {
-    nav.hidden = nav.dataset.parent !== top;
-  });
-  const sub = activeSubByTop[top] || null;
-  if (sub) {
-    document.querySelectorAll(`nav.tabs-sub[data-parent="${top}"] .tab`).forEach(b =>
-      b.classList.toggle("active", b.dataset.subtab === sub)
-    );
-  }
   document.querySelectorAll(".tab-content").forEach(s => {
-    const isMatch = s.dataset.toptab === top && (!sub || s.dataset.subtab === sub);
-    s.classList.toggle("active", isMatch);
+    s.classList.toggle("active", s.dataset.toptab === top);
   });
-  if (top === "1860" && sub === "stats") loadStats();
-  syncUrlFromState();
-}
-
-function switchSubTab(top, sub) {
-  activeSubByTop[top] = sub;
-  document.querySelectorAll(`nav.tabs-sub[data-parent="${top}"] .tab`).forEach(b =>
-    b.classList.toggle("active", b.dataset.subtab === sub)
-  );
-  document.querySelectorAll(".tab-content").forEach(s => {
-    const isMatch = s.dataset.toptab === top && s.dataset.subtab === sub;
-    s.classList.toggle("active", isMatch);
-  });
-  if (top === "1860" && sub === "stats") loadStats();
+  if (top === "stats") loadStats();
   syncUrlFromState();
 }
 
@@ -649,12 +619,6 @@ function wireEvents() {
   });
   document.querySelectorAll(".home-action[data-goto]").forEach(btn => {
     btn.addEventListener("click", () => switchTopTab(btn.dataset.goto));
-  });
-  document.querySelectorAll("nav.tabs-sub .tab").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const parent = btn.closest("nav.tabs-sub").dataset.parent;
-      switchSubTab(parent, btn.dataset.subtab);
-    });
   });
 
   const debouncedReload = debounce(() => { state.page = 0; loadResults(); }, 200);

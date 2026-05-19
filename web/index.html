@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Nomenclàtor de les Illes Balears · 1860</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -17,14 +17,10 @@
 
 <nav class="tabs tabs-main">
   <button class="tab active" data-toptab="home">Inici</button>
-  <button class="tab" data-toptab="1860">Nomenclàtor 1860</button>
+  <button class="tab" data-toptab="explore">Explorar</button>
+  <button class="tab" data-toptab="stats">Estadístiques</button>
+  <button class="tab" data-toptab="glossary">Glossari</button>
   <button class="tab" data-toptab="sql">Consola SQL</button>
-</nav>
-
-<nav class="tabs tabs-sub" data-parent="1860" hidden>
-  <button class="tab active" data-subtab="explore">Explorar</button>
-  <button class="tab" data-subtab="stats">Estadístiques</button>
-  <button class="tab" data-subtab="glossary">Glossari</button>
 </nav>
 
 
@@ -60,7 +56,7 @@
   </div>
 
   <div class="home-actions">
-    <button class="home-action" data-goto="1860"><strong>Explorar →</strong><span>Filtrar les ~3.000 entrades per partit, municipi, classe i distància.</span></button>
+    <button class="home-action" data-goto="explore"><strong>Explorar →</strong><span>Filtrar les ~3.000 entrades per partit, municipi, classe i distància.</span></button>
     <button class="home-action" data-goto="sql"><strong>Consola SQL →</strong><span>DuckDB lliure contra les taules <code>entries</code>, <code>notes</code>, <code>summaries</code> i <code>errata</code> al navegador.</span></button>
   </div>
 
@@ -82,8 +78,8 @@
   </div>
 </section>
 
-<!-- ===== 1860 · EXPLORE ===== -->
-<section id="tab-explore" class="tab-content" data-toptab="1860" data-subtab="explore">
+<!-- ===== EXPLORE ===== -->
+<section id="tab-explore" class="tab-content" data-toptab="explore">
   <div class="source-stats" data-source="1860">
     <span><strong id="stat-rows">…</strong> entrades</span>
     <span><strong id="stat-munis">…</strong> municipis</span>
@@ -167,8 +163,8 @@
   </main>
 </section>
 
-<!-- ===== 1860 · STATS ===== -->
-<section id="tab-stats" class="tab-content" data-toptab="1860" data-subtab="stats">
+<!-- ===== STATS ===== -->
+<section id="tab-stats" class="tab-content" data-toptab="stats">
   <div class="stats-grid">
     <div class="card">
       <h3>Edificis per partit judicial</h3>
@@ -216,8 +212,8 @@
   </div>
 </section>
 
-<!-- ===== 1860 · GLOSSARY ===== -->
-<section id="tab-glossary" class="tab-content" data-toptab="1860" data-subtab="glossary">
+<!-- ===== GLOSSARY ===== -->
+<section id="tab-glossary" class="tab-content" data-toptab="glossary">
   <div class="glos-grid">
     <article class="glos-section">
       <h2>Columnes de la taula</h2>
@@ -354,6 +350,6 @@ LIMIT 25</textarea>
   </p>
 </footer>
 
-<script type="module" src="app.js?v=1"></script>
+<script type="module" src="app.js?v=2"></script>
 </body>
 </html>
