@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Nomenclàtor de les Illes Balears · 1860</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -261,10 +261,14 @@
   <article class="chart-block">
     <h2>3 · Distància al nucli per classe d'edifici</h2>
     <p class="chart-intro">
-      Boxplot mostrant la distribució (mediana, quartils, atípics) de la distància
-      en quilòmetres al centre del municipi per les classes més comunes. Conta
-      com les estructures rurals (<em>predios</em>, <em>caseríos</em>) viuen
-      lluny del nucli, mentre que ciutats i albergs estan més a prop.
+      Boxplot amb la distribució (mediana, quartils, atípics) de la distància
+      en quilòmetres a la capital del municipi per les classes més comunes.
+      Els <em>molinos de viento</em> i les <em>casas de huerto</em> viuen al
+      costat del nucli; els <em>predios</em> i <em>caseríos</em>, més lluny.
+      Els outliers extrems (com l'<em>Isla de Cabrera</em> a 60 km de Palma o
+      els <em>predios</em> d'ESCORCA a 20-30 km del seu poble) són
+      <strong>valors realment impresos al cens</strong> — l'original no
+      especifica com es mesurava aquesta distància.
     </p>
     <div id="chart-distance" class="vega-chart"></div>
   </article>
@@ -455,6 +459,6 @@ LIMIT 25</textarea>
 <script src="vendor/vega.min.js"></script>
 <script src="vendor/vega-lite.min.js"></script>
 <script src="vendor/vega-embed.min.js"></script>
-<script type="module" src="app.js?v=8"></script>
+<script type="module" src="app.js?v=9"></script>
 </body>
 </html>
