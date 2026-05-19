@@ -45,7 +45,7 @@ async function initDuckDB() {
   conn = await db.connect();
   // Cache-busting per a fitxers de dades: bumpa quan canvia el contingut
   // d'algun Parquet i el navegador en serveix una versió obsoleta.
-  const DATA_V = "v=2";
+  const DATA_V = "v=3";
   const data = (name) => new URL(`data/${name}?${DATA_V}`, location.href).href;
   await db.registerFileURL("entries.parquet", data("entries.parquet"), 4, false);
   await db.registerFileURL("notes.parquet", data("notes.parquet"), 4, false);
