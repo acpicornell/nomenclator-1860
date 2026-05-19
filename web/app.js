@@ -471,10 +471,11 @@ async function loadCharts() {
     await Promise.all([
       populateClassesMuniFilter(),
       chartClasses(),
-      chartOccupancy(),
+      setupOccupancyChart(),
       chartDistance(),
       chartPareto(),
       chartToponymRoots(),
+      setupFloorsChart(),
     ]);
   } catch (err) {
     console.error("Error carregant gràfiques:", err);
@@ -541,42 +542,85 @@ async function chartClasses(municipality = "") {
   await vegaEmbed("#chart-classes", spec, { actions: false });
 }
 
-// 2. Barres apilades normalitzades HC/HT/Inh per partit
-async function chartOccupancy() {
-  const rows = await query(`
-    WITH d AS (
-      SELECT judicial_district,
-             CAST(SUM(inhabited_permanent) AS BIGINT) AS hc,
-             CAST(SUM(inhabited_seasonal) AS BIGINT) AS ht,
-             CAST(SUM(uninhabited) AS BIGINT) AS inh
-      FROM entries
-      WHERE NOT is_municipality_total AND NOT is_district_total
-      GROUP BY 1
-    )
-    SELECT judicial_district AS partit, 'Habitats constantment' AS tipus, hc AS valor FROM d
-    UNION ALL SELECT judicial_district, 'Habitats temporalment', ht FROM d
-    UNION ALL SELECT judicial_district, 'Inhabitats', inh FROM d
-  `);
+// 2. Barres apilades normalitzades HC/HT/Inh per partit o municipi
+const OCCUPANCY_TYPES = [
+  { col: "inhabited_permanent",  label: "Habitats constantment" },
+  { col: "inhabited_seasonal",   label: "Habitats temporalment" },
+  { col: "uninhabited",          label: "Inhabitats" },
+];
+const OCCUPANCY_COLORS = ["#3d5a3d","#c98455","#8b6b4f"];
+const OCCUPANCY_DOMAIN = OCCUPANCY_TYPES.map(o => o.label);
+
+async function setupOccupancyChart() {
+  const sel = document.getElementById("f-occupancy-group");
+  if (!sel) return;
+  sel.addEventListener("change", () => chartOccupancy(sel.value));
+  await chartOccupancy(sel.value);
+}
+
+async function chartOccupancy(mode = "district") {
+  const isDistrict = mode === "district";
+  const groupCol = isDistrict ? "judicial_district" : "municipality";
+
+  let sql = `
+    SELECT ${groupCol} AS grp,
+           CAST(SUM(inhabited_permanent) AS BIGINT) AS hc,
+           CAST(SUM(inhabited_seasonal) AS BIGINT) AS ht,
+           CAST(SUM(uninhabited) AS BIGINT) AS inh,
+           CAST(SUM(total) AS BIGINT) AS tot
+    FROM entries
+    WHERE NOT is_municipality_total AND NOT is_district_total
+      AND ${groupCol} IS NOT NULL`;
+  if (!isDistrict) sql += ` AND ${groupCol} != 'SUMMARY'`;
+  sql += ` GROUP BY 1`;
+  if (mode === "muni-top20") sql += ` ORDER BY tot DESC LIMIT 20`;
+  const grouped = await query(sql);
+
+  const rows = [];
+  for (const r of grouped) {
+    rows.push({ grp: r.grp, tipus: "Habitats constantment", valor: r.hc, total: r.tot });
+    rows.push({ grp: r.grp, tipus: "Habitats temporalment", valor: r.ht, total: r.tot });
+    rows.push({ grp: r.grp, tipus: "Inhabitats",            valor: r.inh, total: r.tot });
+  }
+
+  const order = grouped.slice().sort((a, b) => b.tot - a.tot).map(r => r.grp);
+  const isMany = mode !== "district";
+  const groupTitle = isDistrict ? "Partit judicial" : "Municipi";
   const spec = {
     ...VEGA_THEME,
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
-    height: 320,
+    height: isMany ? Math.max(360, order.length * 22 + 60) : 320,
     data: { values: rows },
-    mark: { type: "bar", stroke: "#fdf8f1", strokeWidth: 1 },
+    mark: { type: "bar", stroke: "#fdf8f1", strokeWidth: 0.5 },
     encoding: {
-      x: { field: "partit", type: "nominal", title: null,
-           sort: ["Ibiza","Inca","Mahon","Manacor","Palma"] },
-      y: { field: "valor", type: "quantitative", stack: "normalize",
-           title: "% d'edificis", axis: { format: "%" } },
-      color: { field: "tipus", type: "nominal", title: null,
-               scale: { domain: ["Habitats constantment","Habitats temporalment","Inhabitats"],
-                        range: ["#3d5a3d","#c98455","#8b6b4f"] },
-               legend: { orient: "top" } },
+      [isMany ? "y" : "x"]: {
+        field: "grp",
+        type: "nominal",
+        title: isMany ? null : groupTitle,
+        sort: order,
+        axis: isMany ? { labelLimit: 200 } : { labelAngle: 0 },
+      },
+      [isMany ? "x" : "y"]: {
+        field: "valor",
+        type: "quantitative",
+        stack: "normalize",
+        title: "% d'edificis",
+        axis: { format: "%" },
+      },
+      color: {
+        field: "tipus",
+        type: "nominal",
+        title: null,
+        scale: { domain: OCCUPANCY_DOMAIN, range: OCCUPANCY_COLORS },
+        legend: { orient: "top" },
+      },
+      order: { field: "tipus", sort: OCCUPANCY_DOMAIN },
       tooltip: [
-        { field: "partit", type: "nominal", title: "Partit" },
+        { field: "grp", type: "nominal", title: groupTitle },
         { field: "tipus", type: "nominal", title: "Tipus" },
         { field: "valor", type: "quantitative", title: "Edificis", format: "," },
+        { field: "total", type: "quantitative", title: "Total", format: "," },
       ],
     },
   };
@@ -741,6 +785,110 @@ async function chartToponymRoots() {
     },
   };
   await vegaEmbed("#chart-roots", spec, { actions: false });
+}
+
+// 6. Composició arquitectònica per territori (P1/P2/P3/PM/Alb apilats)
+const FLOOR_TYPES = [
+  { col: "buildings_1_floor",       label: "1 planta" },
+  { col: "buildings_2_floors",      label: "2 plantes" },
+  { col: "buildings_3_floors",      label: "3 plantes" },
+  { col: "buildings_over_3_floors", label: "Més de 3 plantes" },
+  { col: "shelters",                label: "Albergs" },
+];
+const FLOOR_COLORS = ["#c98455","#a04f3c","#5e2620","#6b4561","#8b6b4f"];
+const FLOOR_DOMAIN = FLOOR_TYPES.map(f => f.label);
+
+async function setupFloorsChart() {
+  const sel = document.getElementById("f-floors-group");
+  if (!sel) return;
+  sel.addEventListener("change", () => chartFloors(sel.value));
+  await chartFloors(sel.value);
+}
+
+async function chartFloors(mode = "district") {
+  // mode: 'district' | 'muni-top20' | 'muni-all'
+  const isDistrict = mode === "district";
+  const groupCol = isDistrict ? "judicial_district" : "municipality";
+
+  // Agreguem per dimensió i sumem cada tipus de planta + albergs
+  let sql = `
+    SELECT ${groupCol} AS grp,
+           CAST(SUM(buildings_1_floor) AS BIGINT) AS p1,
+           CAST(SUM(buildings_2_floors) AS BIGINT) AS p2,
+           CAST(SUM(buildings_3_floors) AS BIGINT) AS p3,
+           CAST(SUM(buildings_over_3_floors) AS BIGINT) AS pm,
+           CAST(SUM(shelters) AS BIGINT) AS alb,
+           CAST(SUM(total) AS BIGINT) AS tot
+    FROM entries
+    WHERE NOT is_municipality_total AND NOT is_district_total
+      AND ${groupCol} IS NOT NULL`;
+  if (!isDistrict) sql += ` AND ${groupCol} != 'SUMMARY'`;
+  sql += ` GROUP BY 1`;
+  if (mode === "muni-top20") sql += ` ORDER BY tot DESC LIMIT 20`;
+  const grouped = await query(sql);
+
+  // Pivotem a long-format per a Vega-Lite (un fila per (grp, tipus, valor))
+  const rows = [];
+  for (const r of grouped) {
+    for (let i = 0; i < FLOOR_TYPES.length; i++) {
+      const col = FLOOR_TYPES[i].col === "buildings_1_floor" ? "p1"
+                : FLOOR_TYPES[i].col === "buildings_2_floors" ? "p2"
+                : FLOOR_TYPES[i].col === "buildings_3_floors" ? "p3"
+                : FLOOR_TYPES[i].col === "buildings_over_3_floors" ? "pm"
+                : "alb";
+      rows.push({
+        grp: r.grp,
+        tipus: FLOOR_TYPES[i].label,
+        valor: r[col],
+        total: r.tot,
+      });
+    }
+  }
+
+  // Ordenem grups pel total descendent (top a baix)
+  const order = grouped.slice().sort((a, b) => b.tot - a.tot).map(r => r.grp);
+
+  const isMany = mode !== "district";
+  const groupTitle = isDistrict ? "Partit judicial" : "Municipi";
+  const spec = {
+    ...VEGA_THEME,
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: "container",
+    height: isMany ? Math.max(360, order.length * 22 + 60) : 320,
+    data: { values: rows },
+    mark: { type: "bar", stroke: "#fdf8f1", strokeWidth: 0.5 },
+    encoding: {
+      [isMany ? "y" : "x"]: {
+        field: "grp",
+        type: "nominal",
+        title: isMany ? null : groupTitle,
+        sort: order,
+        axis: isMany ? { labelLimit: 200 } : { labelAngle: 0 },
+      },
+      [isMany ? "x" : "y"]: {
+        field: "valor",
+        type: "quantitative",
+        stack: "normalize",
+        title: "% del parc construït",
+        axis: { format: "%" },
+      },
+      color: {
+        field: "tipus",
+        type: "nominal",
+        title: null,
+        scale: { domain: FLOOR_DOMAIN, range: FLOOR_COLORS },
+        legend: { orient: "top" },
+      },
+      order: { field: "tipus", sort: FLOOR_DOMAIN },
+      tooltip: [
+        { field: "grp", type: "nominal", title: groupTitle },
+        { field: "tipus", type: "nominal", title: "Tipus" },
+        { field: "valor", type: "quantitative", title: "Edificis", format: "," },
+        { field: "total", type: "quantitative", title: "Total municipal", format: "," },
+      ],
+    },
+  };
+  await vegaEmbed("#chart-floors", spec, { actions: false });
 }
 
 // === SQL CONSOLE ===

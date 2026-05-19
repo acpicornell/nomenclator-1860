@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Nomenclàtor de les Illes Balears · 1860</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -240,12 +240,21 @@
   </article>
 
   <article class="chart-block">
-    <h2>2 · Habitació constant vs estacional per partit judicial</h2>
+    <h2>2 · Habitació constant vs estacional</h2>
     <p class="chart-intro">
       Barres apilades normalitzades amb el % d'edificis habitats permanentment
-      (HC), temporalment (HT) i inhabitats (Inh) a cada partit. Revela
-      diferències territorials de patró d'ocupació.
+      (HC), temporalment (HT) i inhabitats (Inh). Revela diferències
+      territorials de patró d'ocupació: la proporció d'inhabitats o
+      estacionals dispara a zones de segona residència històrica.
     </p>
+    <div class="chart-controls">
+      <label for="f-occupancy-group">Mostra per:</label>
+      <select id="f-occupancy-group">
+        <option value="district">Partit judicial</option>
+        <option value="muni-top20">Top 20 municipis (per edificis)</option>
+        <option value="muni-all">Tots els municipis</option>
+      </select>
+    </div>
     <div id="chart-occupancy" class="vega-chart"></div>
   </article>
 
@@ -279,6 +288,27 @@
       un revela un episodi de la història i del paisatge balear.
     </p>
     <div id="chart-roots" class="vega-chart"></div>
+  </article>
+
+  <article class="chart-block">
+    <h2>6 · Composició arquitectònica per territori</h2>
+    <p class="chart-intro">
+      Quina alçada té el parc construït del 1860? Barres apilades
+      normalitzades amb el % d'edificis d'<strong>1, 2, 3</strong> o
+      <strong>més de 3 plantes</strong>, més els <strong>albergs</strong>
+      (estructures no edificades: barraques, coves, casetes). Palma
+      destaca per la gran proporció d'edificis de 3+ plantes (urbà);
+      Inca i Maó són zones d'alta densitat d'albergs (cabanes rurals).
+    </p>
+    <div class="chart-controls">
+      <label for="f-floors-group">Mostra per:</label>
+      <select id="f-floors-group">
+        <option value="district">Partit judicial</option>
+        <option value="muni-top20">Top 20 municipis (per edificis)</option>
+        <option value="muni-all">Tots els municipis</option>
+      </select>
+    </div>
+    <div id="chart-floors" class="vega-chart"></div>
   </article>
 </section>
 
@@ -425,6 +455,6 @@ LIMIT 25</textarea>
 <script src="vendor/vega.min.js"></script>
 <script src="vendor/vega-lite.min.js"></script>
 <script src="vendor/vega-embed.min.js"></script>
-<script type="module" src="app.js?v=5"></script>
+<script type="module" src="app.js?v=8"></script>
 </body>
 </html>
