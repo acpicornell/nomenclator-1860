@@ -939,3 +939,66 @@ footer code { font-size: 0.95em; }
   font-size: inherit;
   min-width: 220px;
 }
+
+/* === NOTE POPOVERS === */
+/* Cel·la "Nota" clickable a la taula d'entries que obre un popover
+ * amb el text complet de la nota a peu del PDF original. */
+.note-ref {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  color: var(--accent-dark);
+  font-weight: 500;
+}
+.note-ref:hover {
+  background: var(--accent-light);
+}
+.note-popover {
+  position: absolute;
+  width: 360px;
+  max-width: calc(100vw - 20px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.9em 1.1em 0.9em 1.1em;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  z-index: 200;
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: var(--text);
+}
+.note-popover .note-meta {
+  font-size: 0.78em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.3em;
+}
+.note-popover .note-muni {
+  display: block;
+  color: var(--accent-dark);
+  font-style: normal;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+  font-size: 0.95em;
+}
+.note-popover .note-text {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-style: italic;
+  color: #3d3022;
+}
+.note-popover .note-close {
+  position: absolute;
+  top: 0.2em;
+  right: 0.4em;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.4em;
+  line-height: 1;
+  color: var(--text-muted);
+  padding: 0.1em 0.3em;
+}
+.note-popover .note-close:hover {
+  color: var(--accent-dark);
+}

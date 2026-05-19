@@ -14,6 +14,9 @@ const DB = {
   source_metadata: [],
 };
 
+// Lookup ràpid notes per (page, ref)
+const notesByKey = new Map();
+
 let state = {
   place: "",
   district: "",
@@ -43,6 +46,13 @@ async function loadData() {
   DB.summaries = summaries;
   DB.errata = errata;
   DB.source_metadata = meta;
+  // Lookup notes per (page, ref) — usat pels popovers de la taula
+  notesByKey.clear();
+  for (const n of DB.notes) {
+    if (n.page != null && n.ref != null) {
+      notesByKey.set(`${n.page}|${n.ref}`, n);
+    }
+  }
 }
 
 // === HELPERS JS (substitueixen SQL bàsic) ===
@@ -234,7 +244,7 @@ function renderTable(rows) {
       <td class="num">${num(r.buildings_over_3_floors)}</td>
       <td class="num">${num(r.shelters)}</td>
       <td class="num"><strong>${num(r.total)}</strong></td>
-      <td>${esc(r.note_ref)}</td>
+      <td>${renderNoteCell(r)}</td>
     </tr>`;
   }).join("");
 }
@@ -250,6 +260,50 @@ function formatKm(v) {
 function esc(s) {
   if (s == null) return "";
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+// Renderitza la cel·la "Nota" de la taula d'entries.
+// Si la referencia matcha una nota a peu de pàgina, és clickable i obre un
+// popover amb el text complet. Si no, només mostra el text literal (cas
+// rar de metadades llargues a algunes files TOTAL PARTIDO).
+function renderNoteCell(entry) {
+  if (!entry.note_ref) return "";
+  const key = `${entry.page}|${entry.note_ref}`;
+  if (notesByKey.has(key)) {
+    return `<span class="note-ref" data-page="${entry.page}" data-ref="${esc(entry.note_ref)}">(${esc(entry.note_ref)})</span>`;
+  }
+  return esc(entry.note_ref);
+}
+
+function showNotePopover(anchor, note) {
+  document.getElementById("note-popover")?.remove();
+  const p = document.createElement("div");
+  p.id = "note-popover";
+  p.className = "note-popover";
+  const muniLine = note.municipality
+    ? `<em class="note-muni">${esc(note.municipality)}</em>` : "";
+  p.innerHTML = `
+    <button class="note-close" aria-label="Tancar">&times;</button>
+    <div class="note-meta">Pàgina ${esc(note.page)} · nota (${esc(note.ref)})</div>
+    ${muniLine}
+    <p class="note-text">${esc(note.text)}</p>
+  `;
+  document.body.appendChild(p);
+  // Posiciona sota l'àncora, ajustat per no sortir-se de la finestra
+  const rect = anchor.getBoundingClientRect();
+  const popW = 360;
+  const top = window.scrollY + rect.bottom + 6;
+  let left = rect.left + window.scrollX - 10;
+  if (left + popW > window.scrollX + window.innerWidth - 10) {
+    left = window.scrollX + window.innerWidth - popW - 10;
+  }
+  if (left < window.scrollX + 10) left = window.scrollX + 10;
+  p.style.top = top + "px";
+  p.style.left = left + "px";
+}
+
+function closeNotePopover() {
+  document.getElementById("note-popover")?.remove();
 }
 
 function formatRelativeTime(dt) {
@@ -982,6 +1036,29 @@ function wireEvents() {
   window.addEventListener("hashchange", () => {
     if (!_applyingUrl) applyStateFromUrl();
   });
+
+  // Popover de notes a peu — click sobre una cel·la (a)(b)... obre, click fora o ESC tanca
+  document.addEventListener("click", e => {
+    const ref = e.target.closest(".note-ref");
+    if (ref) {
+      const key = `${ref.dataset.page}|${ref.dataset.ref}`;
+      const note = notesByKey.get(key);
+      if (note) showNotePopover(ref, note);
+      e.stopPropagation();
+      return;
+    }
+    if (e.target.closest(".note-close")) {
+      closeNotePopover();
+      return;
+    }
+    if (!e.target.closest("#note-popover")) {
+      closeNotePopover();
+    }
+  });
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeNotePopover();
+  });
+  window.addEventListener("scroll", closeNotePopover, { passive: true });
 
   document.querySelectorAll("nav.tabs-main .tab").forEach(btn => {
     btn.addEventListener("click", () => switchTopTab(btn.dataset.toptab));
