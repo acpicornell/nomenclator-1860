@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Nomenclàtor de les Illes Balears · 1860</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -284,9 +284,34 @@
   <article class="chart-block">
     <h2>4 · Corba de Pareto — concentració d'edificis</h2>
     <p class="chart-intro">
-      Quin percentatge dels topònims acumula quin percentatge dels edificis?
-      Una corba ràpida ens diu que els pobles grans (Palma, Sóller, Maó…)
-      són minoritaris en nombre però dominen el cens en volum.
+      Una <em>corba de concentració acumulada</em>: quant de desigualment
+      es reparteixen els edificis entre els topònims del cens.
+    </p>
+    <p class="chart-intro">
+      <strong>Construcció:</strong> ordenem els 2.962 topònims del més
+      gran al més petit segons el seu <code>total</code> d'edificis.
+      Cada punt (<em>x</em>, <em>y</em>) significa: «el primer
+      <em>x</em> % de topònims acumula el <em>y</em> % de tots els
+      edificis del cens». La corba sempre comença a (0, 0) i acaba a
+      (100, 100).
+    </p>
+    <p class="chart-intro">
+      <strong>Lectura:</strong> una línia diagonal perfecta voldria
+      dir igualtat total (cada topònim aporta el mateix nombre
+      d'edificis). Com més la corba es <em>bomba cap a l'esquerra-superior</em>,
+      més concentració hi ha. Les dues <span style="color:#a04f3c">línies
+      discontínues</span> marquen la referència del <em>principi de
+      Pareto</em> (20% / 80%): si la corba passa exactament per (20, 80),
+      el 20% dels topònims concentra el 80% dels edificis.
+    </p>
+    <p class="chart-intro">
+      Al cens de 1860 la corba és <strong>molt bombada</strong>: la
+      signatura d'una societat agrària amb un dualisme territorial fort
+      — uns pocs nuclis urbans (Palma sola pesa ~7,5% del total
+      d'edificis de Balears) contra una xarxa molt dispersa de
+      <em>possessions</em>, <em>predios</em> i <em>casas de labor</em>
+      amb 1-3 edificis cadascuna. Fes hover sobre la corba per veure
+      a quin topònim correspon cada punt.
     </p>
     <div id="chart-pareto" class="vega-chart"></div>
   </article>
@@ -446,6 +471,6 @@
 <script src="vendor/vega.min.js"></script>
 <script src="vendor/vega-lite.min.js"></script>
 <script src="vendor/vega-embed.min.js"></script>
-<script type="module" src="app.js?v=13"></script>
+<script type="module" src="app.js?v=15"></script>
 </body>
 </html>

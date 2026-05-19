@@ -683,6 +683,31 @@ async function chartPareto() {
         },
       },
       {
+        // Capa de punts transparents per al hover (precisa)
+        mark: { type: "point", size: 30, opacity: 0, filled: true, color: "#5e2620" },
+        encoding: {
+          x: { field: "pct_places", type: "quantitative" },
+          y: { field: "pct_buildings", type: "quantitative" },
+          opacity: {
+            condition: { param: "hover", value: 0.9, empty: false },
+            value: 0,
+          },
+          tooltip: [
+            { field: "rk", type: "quantitative", title: "Rang", format: "," },
+            { field: "place", type: "nominal", title: "Topònim" },
+            { field: "municipality", type: "nominal", title: "Municipi" },
+            { field: "total", type: "quantitative", title: "Edificis", format: "," },
+            { field: "pct_places", type: "quantitative", title: "% topònims", format: ".2f" },
+            { field: "pct_buildings", type: "quantitative", title: "% acumulat edificis", format: ".2f" },
+          ],
+        },
+        params: [{
+          name: "hover",
+          select: { type: "point", on: "mouseover", nearest: true,
+                    fields: ["pct_places"] },
+        }],
+      },
+      {
         mark: { type: "rule", color: "#a04f3c", strokeDash: [4,4], opacity: 0.7 },
         data: { values: [{ x: 20 }] },
         encoding: { x: { field: "x", type: "quantitative" } },
