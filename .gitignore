@@ -1,0 +1,19 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
+
+# Output del pipeline
+output/
+db/*.duckdb
+db/*.duckdb.wal
+db/*.duckdb.bak
+
+# PDF original (no se versiona)
+pdfs/
+
+# Llibreries per a funcionament offline (~100 MB). Reproduïble amb:
+#   python scripts/download_vendor.py
+web/vendor/

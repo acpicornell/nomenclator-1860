@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Nomenclàtor de les Illes Balears · 1860</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <h1>Nomenclàtor de les Illes Balears · 1860</h1>
+    <p class="subtitle">Cens edifici a edifici de la Junta General d'Estadística · 25 de desembre de 1860</p>
+  </div>
+</header>
+
+<nav class="tabs tabs-main">
+  <button class="tab active" data-toptab="home">Inici</button>
+  <button class="tab" data-toptab="1860">Nomenclàtor 1860</button>
+  <button class="tab" data-toptab="sql">Consola SQL</button>
+</nav>
+
+<nav class="tabs tabs-sub" data-parent="1860" hidden>
+  <button class="tab active" data-subtab="explore">Explorar</button>
+  <button class="tab" data-subtab="stats">Estadístiques</button>
+  <button class="tab" data-subtab="glossary">Glossari</button>
+</nav>
+
+
+<!-- ===== HOME / INICI ===== -->
+<section id="tab-home" class="tab-content active" data-toptab="home">
+  <div class="home-hero">
+    <h1>Nomenclàtor de les Illes Balears · 1860</h1>
+    <div class="home-stats">
+      <div class="home-stat"><span class="num" id="home-stat-rows">…</span><span class="label">entrades</span></div>
+      <div class="home-stat"><span class="num" id="home-stat-munis">…</span><span class="label">municipis</span></div>
+      <div class="home-stat"><span class="num" id="home-stat-districts">…</span><span class="label">partits judicials</span></div>
+      <div class="home-stat"><span class="num" id="home-stat-notes">…</span><span class="label">notes a peu</span></div>
+    </div>
+  </div>
+
+  <div class="home-prose">
+    <h2>Què és</h2>
+    <p>
+      Una digitalització completa del <em>Nomenclátor de la Provincia de las Baleares</em>, redactat
+      el <strong>25 de desembre de 1860</strong> per la Junta General d'Estadística (predecessora
+      de l'INE) sota Alejandro Oliván. És el primer nomenclàtor espanyol amb tabulació
+      <strong>a nivell d'edifici</strong>: per a cada poble balear declara els edificis per ús
+      (habitats permanentment, temporals, inhabitats), per nombre de plantes, més albergs i la
+      distància en quilòmetres al centre del municipi.
+    </p>
+    <p>
+      El PDF facsímil de l'INE es va extreure pàgina a pàgina amb <a href="https://anthropic.com" target="_blank">Claude Opus 4.7</a>
+      (vision) i es va validar contra els subtotals impresos: coherència aritmètica del 100%. La
+      pàgina 51 conté una fe d'errates aplicada a la base de dades, i la pàgina 50 (4 quadres-resum
+      per partit judicial) es conserva en una taula a part.
+    </p>
+    <h2>Per on començar</h2>
+  </div>
+
+  <div class="home-actions">
+    <button class="home-action" data-goto="1860"><strong>Explorar →</strong><span>Filtrar les ~3.000 entrades per partit, municipi, classe i distància.</span></button>
+    <button class="home-action" data-goto="sql"><strong>Consola SQL →</strong><span>DuckDB lliure contra les taules <code>entries</code>, <code>notes</code>, <code>summaries</code> i <code>errata</code> al navegador.</span></button>
+  </div>
+
+  <div class="home-prose">
+    <h2>Sobre la font i el codi</h2>
+    <p>
+      <strong>Font:</strong> <em>Nomenclátor de los pueblos de España según el Censo de 25 de diciembre de 1860</em>,
+      Junta General de Estadística del Reino, Madrid (publicat cap al 1863). Domini públic per
+      antiguitat (obra de l'Estat de més de 160 anys). 51 pàgines, 60 municipis, ~3.000 entitats
+      de població als cinc partits judicials de Balears: <strong>Eivissa</strong> (Pitiüses i
+      Formentera), <strong>Inca</strong> (nord de Mallorca), <strong>Maó</strong> (Menorca),
+      <strong>Manacor</strong> (est de Mallorca) i <strong>Palma</strong> (oest i capital).
+    </p>
+    <p>
+      <strong>Codi:</strong> AGPL-3.0. Motor <a href="https://duckdb.org/docs/api/wasm" target="_blank">DuckDB-WASM</a>
+      corrent 100% al navegador (sense servidor). Vegeu <code>data/SOURCES.md</code> per la procedència
+      i atribució completa.
+    </p>
+  </div>
+</section>
+
+<!-- ===== 1860 · EXPLORE ===== -->
+<section id="tab-explore" class="tab-content" data-toptab="1860" data-subtab="explore">
+  <div class="source-stats" data-source="1860">
+    <span><strong id="stat-rows">…</strong> entrades</span>
+    <span><strong id="stat-munis">…</strong> municipis</span>
+    <span><strong id="stat-districts">…</strong> partits judicials</span>
+    <span><strong id="stat-notes">…</strong> notes a peu</span>
+    <span class="source-fresh" id="fresh-1860"></span>
+  </div>
+  <aside class="filters">
+    <h3>Filtres</h3>
+
+    <div class="filter-group">
+      <label for="f-place">Població (cerca)</label>
+      <input id="f-place" type="text" placeholder="Ex: Ca'n, Molí, Hort…">
+    </div>
+
+    <div class="filter-group">
+      <label for="f-district">Partit judicial</label>
+      <select id="f-district"><option value="">— Tots —</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label for="f-municipality">Municipi</label>
+      <select id="f-municipality"><option value="">— Tots —</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label for="f-class">Classe d'edifici</label>
+      <select id="f-class"><option value="">— Totes —</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label>Distància (km)</label>
+      <div class="range-row">
+        <input id="f-km-min" type="number" step="0.1" min="0" placeholder="mín">
+        <input id="f-km-max" type="number" step="0.1" min="0" placeholder="màx">
+      </div>
+    </div>
+
+    <div class="filter-group inline">
+      <label><input type="checkbox" id="f-include-totals"> Incloure files de subtotal</label>
+    </div>
+
+    <button id="btn-clear" class="ghost">Netejar filtres</button>
+    <button id="btn-export-1860" class="ghost btn-export" title="Descarrega un CSV amb tots els resultats actuals">Descarregar CSV</button>
+  </aside>
+
+  <main class="results">
+    <div class="results-header">
+      <span id="results-count">Carregant…</span>
+      <div class="page-controls">
+        <button id="btn-prev" disabled>← Anterior</button>
+        <span id="page-info">pàgina 1</span>
+        <button id="btn-next">Següent →</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="table-results">
+        <thead>
+          <tr>
+            <th data-sort="municipality">Municipi</th>
+            <th data-sort="place">Població</th>
+            <th data-sort="place_class">Classe</th>
+            <th data-sort="distance_km" class="num">km</th>
+            <th class="num" title="Habitats constantment">HC</th>
+            <th class="num" title="Habitats temporalment">HT</th>
+            <th class="num" title="Inhabitats">Inh</th>
+            <th class="num">P1</th>
+            <th class="num">P2</th>
+            <th class="num">P3</th>
+            <th class="num" title="Més de 3 pisos">PM</th>
+            <th class="num">Alb</th>
+            <th data-sort="total" class="num">Total</th>
+            <th>Nota</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-results">
+          <tr><td colspan="14" class="empty">Carregant DuckDB-WASM…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</section>
+
+<!-- ===== 1860 · STATS ===== -->
+<section id="tab-stats" class="tab-content" data-toptab="1860" data-subtab="stats">
+  <div class="stats-grid">
+    <div class="card">
+      <h3>Edificis per partit judicial</h3>
+      <table id="t-districts"></table>
+    </div>
+    <div class="card">
+      <h3>Top 15 municipis per nombre d'edificis</h3>
+      <table id="t-top-munis"></table>
+    </div>
+    <div class="card">
+      <h3>Classes més freqüents</h3>
+      <table id="t-classes"></table>
+    </div>
+    <div class="card">
+      <h3>Distribució d'edificis per nombre de plantes</h3>
+      <table id="t-floors"></table>
+    </div>
+  </div>
+
+  <h2 class="section-divider">Quadres-resum oficials (pàg. 50 de l'original)</h2>
+  <p class="section-intro">
+    Aquests 4 quadres agregats per partit judicial tanquen el Nomenclàtor 1860. Són les
+    xifres de control que va publicar la Junta General d'Estadística. Poden no coincidir
+    exactament amb la suma de les files individuals: les petites discrepàncies provenen
+    d'errors aritmètics del mateix impressor el 1860 o d'errates tipogràfiques que el
+    procés de digitalització conserva tal com apareixen.
+  </p>
+  <div class="stats-grid">
+    <div class="card summary-card">
+      <h3 id="r-c1-title">Quadre 1 — Poblacions i grups</h3>
+      <table id="t-summary-c1"></table>
+    </div>
+    <div class="card summary-card">
+      <h3 id="r-c2-title">Quadre 2 — Entitats aïllades</h3>
+      <table id="t-summary-c2"></table>
+    </div>
+    <div class="card summary-card summary-wide">
+      <h3 id="r-c3-title">Quadre 3 — Edificis per construcció</h3>
+      <table id="t-summary-c3"></table>
+    </div>
+    <div class="card summary-card summary-wide">
+      <h3 id="r-c4-title">Quadre 4 — Edificis i albergs per habitació</h3>
+      <table id="t-summary-c4"></table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 1860 · GLOSSARY ===== -->
+<section id="tab-glossary" class="tab-content" data-toptab="1860" data-subtab="glossary">
+  <div class="glos-grid">
+    <article class="glos-section">
+      <h2>Columnes de la taula</h2>
+      <p class="glos-intro">El cens registra cada població amb 9 columnes numèriques que compten els edificis de dues formes complementàries: per <em>ús</em> (3 primeres) i per <em>nombre de plantes</em> (5 següents). El total ha de coincidir entre les dues bandes.</p>
+
+      <h3>Per ús</h3>
+      <dl>
+        <dt>HC <span class="code">inhabited_permanent</span></dt>
+        <dd>Edificis habitats tot l'any.</dd>
+        <dt>HT <span class="code">inhabited_seasonal</span></dt>
+        <dd>Edificis ocupats només una part de l'any (segones residències, cases de pagès estacionals, etc.).</dd>
+        <dt>Inh <span class="code">uninhabited</span></dt>
+        <dd>Edificis sense ocupants en el moment del cens.</dd>
+      </dl>
+
+      <h3>Per nombre de plantes</h3>
+      <dl>
+        <dt>P1 <span class="code">buildings_1_floor</span></dt>
+        <dd>Edificis d'1 planta.</dd>
+        <dt>P2 <span class="code">buildings_2_floors</span></dt>
+        <dd>Edificis de 2 plantes.</dd>
+        <dt>P3 <span class="code">buildings_3_floors</span></dt>
+        <dd>Edificis de 3 plantes.</dd>
+        <dt>PM <span class="code">buildings_over_3_floors</span></dt>
+        <dd>Edificis de més de 3 plantes.</dd>
+        <dt>Alb <span class="code">shelters</span></dt>
+        <dd>Estructures habitables que <strong>no són edificis</strong> pròpiament: barraques, coves, cases de palla, casetes, etc.</dd>
+        <dt>Total</dt>
+        <dd>Suma. HC + HT + Inh = P1 + P2 + P3 + PM + Alb.</dd>
+      </dl>
+    </article>
+
+    <article class="glos-section">
+      <h2>Classes de població</h2>
+      <p class="glos-intro">El Nomenclàtor distingeix diversos tipus d'entitat. Les definicions següents provenen literalment de les notes al peu de la pàgina 50 (quadres-resum de l'original) i es conserven en castellà tal com apareixen.</p>
+
+      <h3>Poblacions i grups</h3>
+      <dl>
+        <dt>Ciudad · Villa · Lugar · Aldéa</dt>
+        <dd>Poblacions consolidades, classificades per l'apel·latiu oficial. <em>«Las poblaciones que figuran en el cuerpo del Nomenclátor, clasificadas con iguales apelativos, ó á veces y segun las provincias, con los de "anteiglésia, pueblo", etc.»</em></dd>
+        <dt>Caserío</dt>
+        <dd><em>«Dos ó mas casas, siempre en corto número, habitadas constante ó temporalmente en todo ó en parte, destinadas por lo general á la labranza, y en esta provincia llamadas Prédio, casas de labranza, etc.»</em></dd>
+        <dt>Grupo</dt>
+        <dd><em>«Cada conjunto de construcciones mas ó menos perceptibles constantemente inhabitadas, como cuevas para vinos, pajares, palomares, etc., y también la aglomeración de abrigos ó corralizas de pastores y ganados, tengan ó no habitadores.»</em></dd>
+      </dl>
+
+      <h3>Entitats aïllades</h3>
+      <dl>
+        <dt>Casa · Prédio · Casa de labor / labranza · Alquería</dt>
+        <dd>Edificis habitats individuals (no part d'una població). <em>«Todos los edificios habitados, ya se clasifiquen con ese nombre ó con los de "alquería, cortijo, masía, molino, torre", etc.»</em></dd>
+        <dt>Albergues</dt>
+        <dd><em>«Entidades que están también habitadas, pero que no son edificios: barraca, caseta, cueva, choza, etc.»</em></dd>
+        <dt>Sítios</dt>
+        <dd><em>«Entidades, sean ó no edificios, que se hallan inhabitadas: almacenes, bodegas, cuevas para elaborar y guardar vinos, ermitas, iglésias, pajares, palomares, torres telegráficas, secaderos, etc.»</em></dd>
+      </dl>
+
+      <h3>Altres classes freqüents a les Balears</h3>
+      <dl>
+        <dt>Casa de huerto / huerta</dt>
+        <dd>Casa annexa a un hort o explotació hortícola.</dd>
+        <dt>Casa de recréo</dt>
+        <dd>Segona residència d'ús estacional o recreatiu.</dd>
+        <dt>Molino de viento · Aceña · Molí</dt>
+        <dd>Molins. L'<em>aceña</em> és el molí hidràulic tradicional.</dd>
+        <dt>Torre de vigía · Atalaya · Torre de faro</dt>
+        <dd>Estructures defensives o de senyalització costanera.</dd>
+        <dt>Parróquia y casa · Oratório · Capilla del cementério</dt>
+        <dd>Edificis eclesiàstics.</dd>
+      </dl>
+    </article>
+
+    <article class="glos-section">
+      <h2>Convencions del text original</h2>
+      <dl>
+        <dt>El símbol <code>»</code></dt>
+        <dd>Equival a zero / res en les columnes numèriques del PDF de 1860. A la base de dades s'emmagatzema com a <code>0</code>.</dd>
+        <dt>Distància amb apòstrof</dt>
+        <dd><code>9'3</code> a l'original = <code>9,3 km</code>. Emmagatzemat a la BD com a <code>9.3</code>.</dd>
+        <dt>Separador europeu de milers</dt>
+        <dd><code>1.062</code> a l'original = <code>1062</code>, no <code>1,062</code>. Era convenció vuitcentista amb <code>.</code> com a separador de milers.</dd>
+        <dt>«Edificios en poblado» vs «en despoblado»</dt>
+        <dd><em>«Edificios en poblado, los comprendidos dentro del casco de las ciudades, villas, lugares y aldéas; y en despoblado, los que forman parte de los caseríos, grupos, casas y sítios.»</em></dd>
+      </dl>
+    </article>
+
+    <article class="glos-section">
+      <h2>Sobre les dades</h2>
+      <dl>
+        <dt>Font</dt>
+        <dd><em>Nomenclátor de la Provincia de las Baleares</em>, Junta General de Estadística del Reino, Madrid 1860 (publicat cap al 1863). 51 pàgines, 60 municipis, ~3.000 entitats de població. L'INE com a tal no existia: es va crear el 1945; abans els censos els elaborava la Junta General d'Estadística (1856-1873) i, a partir de 1870, l'Institut Geogràfic i Estadístic que la va succeir.</dd>
+        <dt>5 partits judicials</dt>
+        <dd>Eivissa (Pitiüses i Formentera), Inca (nord de Mallorca), Maó (Menorca), Manacor (est de Mallorca), Palma (oest i capital).</dd>
+        <dt>Fe d'errates</dt>
+        <dd>La pàgina 51 de l'original conté 8 errates de noms de població, totes aplicades en aquesta BD (taula <code>errata</code>).</dd>
+        <dt>Pàgina 50 (resums)</dt>
+        <dd>4 quadres agregats per partit, emmagatzemats en una taula a part <code>summaries</code> per no barrejar-se amb les files de municipi.</dd>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<!-- ===== SQL ===== -->
+<section id="tab-sql" class="tab-content" data-toptab="sql">
+  <div class="sql-help">
+    <p>
+      Consulta SQL lliure contra la BD DuckDB al teu navegador.
+      Taules: <code>entries</code> (dades principals), <code>notes</code>, <code>summaries</code>, <code>errata</code>.
+      Exemples:
+    </p>
+    <ul>
+      <li><code>SELECT place, total FROM entries WHERE municipality='ARTÁ' ORDER BY total DESC</code></li>
+      <li><code>SELECT place_class, COUNT(*) FROM entries GROUP BY 1 ORDER BY 2 DESC</code></li>
+      <li><code>SELECT * FROM entries WHERE place LIKE 'Molí%' LIMIT 50</code></li>
+    </ul>
+  </div>
+  <textarea id="sql-input" placeholder="SELECT * FROM entries LIMIT 10">SELECT place, place_class, distance_km, total
+FROM entries
+WHERE municipality = 'PALMA' AND NOT is_municipality_total
+ORDER BY total DESC
+LIMIT 25</textarea>
+  <div class="sql-controls">
+    <button id="btn-sql-run">Executar (Ctrl+Enter)</button>
+    <span id="sql-status"></span>
+  </div>
+  <div class="table-wrap">
+    <table id="t-sql-result"></table>
+  </div>
+</section>
+
+<footer>
+  <p>
+    AGPL-3.0 ·
+    <a href="https://duckdb.org/docs/api/wasm" target="_blank">DuckDB-WASM</a>
+  </p>
+</footer>
+
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>

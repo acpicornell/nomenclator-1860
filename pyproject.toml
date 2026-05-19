@@ -1,0 +1,18 @@
+[project]
+name = "nomenclator-1860"
+version = "0.1.0"
+description = "Digitization of the 1860 Nomenclátor of the Province of the Balearic Islands"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.46.0",
+    "duckdb>=1.5.0",
+    "pymupdf>=1.27.0",
+    "python-dotenv>=1.1.0",
+    "pillow>=10.2.0",
+    "typer>=0.20.0",
+    "loguru>=0.7.0",
+    "rich>=14.0.0",
+]
+
+[tool.uv]
+package = false
