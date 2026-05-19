@@ -13,3 +13,9 @@ db/*.duckdb.bak
 
 # PDF original (no se versiona)
 pdfs/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
