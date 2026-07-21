@@ -1,5 +1,7 @@
 # Nomenclàtor de les Illes Balears · 1860
 
+[![Deploy](https://github.com/acpicornell/nomenclator-1860/actions/workflows/deploy.yml/badge.svg)](https://github.com/acpicornell/nomenclator-1860/actions/workflows/deploy.yml)
+
 Digitalització completa del *Nomenclátor de la Provincia de las Baleares*, redactat el **25 de desembre de 1860** per la Junta General d'Estadística (predecessora de l'INE) sota Alejandro Oliván. És el primer nomenclàtor espanyol amb tabulació a nivell d'edifici.
 
 Cada poble balear declara els edificis per ús (habitats permanentment, temporals, inhabitats), per nombre de plantes, més albergs i la distància al centre del municipi. Domini públic per antiguitat.
