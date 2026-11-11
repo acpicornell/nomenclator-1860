@@ -252,11 +252,11 @@ function renderTable(rows) {
 }
 
 function num(v) {
-  if (v == null || v === 0) return '<span style="color:#ccc">·</span>';
+  if (v == null || v === 0) return '<span style="color:var(--faint)">·</span>';
   return Number(v).toLocaleString("ca-ES");
 }
 function formatKm(v) {
-  if (v == null) return '<span style="color:#ccc">·</span>';
+  if (v == null) return '<span style="color:var(--faint)">·</span>';
   return Number(v).toFixed(1);
 }
 function esc(s) {
@@ -479,7 +479,7 @@ function renderSummary(tableId, cols, rows) {
     const label = r.is_total ? "TOTAL" : r.judicial_district;
     const cls = r.is_total ? "is-total" : "";
     const values = r.values.map(v =>
-      `<td class="num">${v == null ? '<span style="color:#ccc">·</span>' : Number(v).toLocaleString("ca-ES")}</td>`
+      `<td class="num">${v == null ? '<span style="color:var(--faint)">·</span>' : Number(v).toLocaleString("ca-ES")}</td>`
     ).join("");
     return `<tr class="${cls}"><td><strong>${esc(label)}</strong></td>${values}</tr>`;
   }).join("");
@@ -500,19 +500,55 @@ function renderSimpleTable(id, headers, rows, rowFn) {
 // === CHARTS (Vega-Lite) ===
 let _chartsLoaded = false;
 
-const VEGA_THEME = {
-  config: {
-    font: "system-ui, sans-serif",
-    background: null,
-    view: { stroke: null },
-    axis: { labelFontSize: 11, titleFontSize: 12, labelColor: "#3d3022",
-            titleColor: "#3d3022", gridColor: "#e5dccf" },
-    legend: { labelFontSize: 11, titleFontSize: 12 },
-    title: { fontSize: 13, color: "#5e2620" },
-    range: { category: ["#5e2620","#a04f3c","#c98455","#7c8c6e","#3d5a3d",
-                        "#8b6b4f","#b8a07c","#4a6d8a","#6b4561","#8c8c5e"] },
-  }
-};
+// The charts draw on a canvas the stylesheet cannot reach, so their colours
+// are read from the theme's --chart-* custom properties at the moment they
+// are drawn (style.css), and redrawChartsOnThemeChange() draws them again
+// when the reader flips the theme.
+function cc(name) {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(`--chart-${name}`).trim();
+}
+
+function vegaTheme() {
+  return {
+    config: {
+      font: "system-ui, sans-serif",
+      background: null,
+      view: { stroke: null },
+      axis: { labelFontSize: 11, titleFontSize: 12, labelColor: cc("ink"),
+              titleColor: cc("ink"), gridColor: cc("grid"), domainColor: cc("grid"),
+              tickColor: cc("grid") },
+      legend: { labelFontSize: 11, titleFontSize: 12, labelColor: cc("ink"),
+                titleColor: cc("ink") },
+      title: { fontSize: 13, color: cc("primary"), subtitleColor: cc("sub") },
+      range: { category: ["primary", "secondary", "tan", "sage", "green",
+                          "brown", "sand", "blue", "plum", "olive"].map(cc) },
+    }
+  };
+}
+
+// Draws every chart again with the current theme's colours, keeping each
+// chart's own selection. Only after loadCharts() has run: before that there
+// is nothing drawn and the charts tab draws itself when first opened.
+function redrawCharts() {
+  if (!_chartsLoaded) return;
+  const value = id => (document.getElementById(id) || {}).value;
+  Promise.all([
+    chartClasses(value("f-classes-muni") || ""),
+    chartOccupancy(value("f-occupancy-group") || "district"),
+    chartDistance(),
+    chartPareto(),
+    chartToponymRoots(),
+    chartFloors(value("f-floors-group") || "district"),
+  ]).catch(err => console.error("Error redibuixant gràfiques:", err));
+}
+
+new MutationObserver(redrawCharts).observe(document.documentElement,
+  { attributes: true, attributeFilter: ["data-theme"] });
+if (window.matchMedia) {
+  const mq = matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", redrawCharts);
+}
 
 async function loadCharts() {
   if (_chartsLoaded) return;
@@ -562,12 +598,12 @@ async function chartClasses(municipality = "") {
   const others = sorted.slice(10).reduce((s, r) => s + r.n, 0);
   const rows = others > 0 ? top10.concat([{ cls: "altres", n: others }]) : top10;
   const spec = {
-    ...VEGA_THEME,
+    ...vegaTheme(),
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: 360,
     data: { values: rows },
-    mark: { type: "arc", innerRadius: 80, stroke: "#fdf8f1", strokeWidth: 2 },
+    mark: { type: "arc", innerRadius: 80, stroke: cc("sep"), strokeWidth: 2 },
     encoding: {
       theta: { field: "n", type: "quantitative", stack: true },
       color: { field: "cls", type: "nominal", title: "Classe",
@@ -584,7 +620,7 @@ async function chartClasses(municipality = "") {
 
 // 2. HC/HT/Inh apilades normalitzades
 const OCCUPANCY_DOMAIN = ["Habitats constantment", "Habitats temporalment", "Inhabitats"];
-const OCCUPANCY_COLORS = ["#3d5a3d", "#c98455", "#8b6b4f"];
+const occupancyColors = () => [cc("green"), cc("tan"), cc("brown")];
 
 async function setupOccupancyChart() {
   const sel = document.getElementById("f-occupancy-group");
@@ -615,12 +651,12 @@ async function chartOccupancy(mode = "district") {
   const isMany = mode !== "district";
   const groupTitle = isDistrict ? "Partit judicial" : "Municipi";
   const spec = {
-    ...VEGA_THEME,
+    ...vegaTheme(),
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: isMany ? Math.max(360, order.length * 22 + 60) : 320,
     data: { values: rows },
-    mark: { type: "bar", stroke: "#fdf8f1", strokeWidth: 0.5 },
+    mark: { type: "bar", stroke: cc("sep"), strokeWidth: 0.5 },
     encoding: {
       [isMany ? "y" : "x"]: {
         field: "grp", type: "nominal",
@@ -636,7 +672,7 @@ async function chartOccupancy(mode = "district") {
       },
       color: {
         field: "tipus", type: "nominal", title: null,
-        scale: { domain: OCCUPANCY_DOMAIN, range: OCCUPANCY_COLORS },
+        scale: { domain: OCCUPANCY_DOMAIN, range: occupancyColors() },
         legend: { orient: "top" },
       },
       order: { field: "tipus", sort: OCCUPANCY_DOMAIN },
@@ -674,21 +710,21 @@ async function chartDistance() {
   const order = topClasses.slice().sort((a, b) => med[a] - med[b]);
 
   const spec = {
-    ...VEGA_THEME,
+    ...vegaTheme(),
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: 340,
     title: {
       text: "Distància a la capital del municipi · km",
       subtitle: "Literal del cens: «Su distancia de la capital del Ayuntamiento». La metodologia de mesura no s'explicita.",
-      subtitleColor: "#7c6f5a",
+      subtitleColor: cc("sub"),
       subtitleFontSize: 11,
       subtitleFontStyle: "italic",
       anchor: "start",
     },
     data: { values: rows },
-    mark: { type: "boxplot", size: 18, color: "#a04f3c",
-            outliers: { color: "#5e2620", opacity: 0.4, size: 18 } },
+    mark: { type: "boxplot", size: 18, color: cc("secondary"),
+            outliers: { color: cc("primary"), opacity: 0.4, size: 18 } },
     encoding: {
       x: { field: "km", type: "quantitative", title: "Distància al nucli (km)",
            scale: { domainMin: 0 } },
@@ -721,14 +757,14 @@ async function chartPareto() {
     };
   });
   const spec = {
-    ...VEGA_THEME,
+    ...vegaTheme(),
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: 320,
     data: { values: rows },
     layer: [
       {
-        mark: { type: "line", color: "#5e2620", strokeWidth: 2 },
+        mark: { type: "line", color: cc("primary"), strokeWidth: 2 },
         encoding: {
           x: { field: "pct_places", type: "quantitative",
                title: "% de topònims (ordenats per mida descendent)",
@@ -740,7 +776,7 @@ async function chartPareto() {
       },
       {
         // Capa de punts transparents per al hover (precisa)
-        mark: { type: "point", size: 30, opacity: 0, filled: true, color: "#5e2620" },
+        mark: { type: "point", size: 30, opacity: 0, filled: true, color: cc("primary") },
         encoding: {
           x: { field: "pct_places", type: "quantitative" },
           y: { field: "pct_buildings", type: "quantitative" },
@@ -764,12 +800,12 @@ async function chartPareto() {
         }],
       },
       {
-        mark: { type: "rule", color: "#a04f3c", strokeDash: [4,4], opacity: 0.7 },
+        mark: { type: "rule", color: cc("secondary"), strokeDash: [4,4], opacity: 0.7 },
         data: { values: [{ x: 20 }] },
         encoding: { x: { field: "x", type: "quantitative" } },
       },
       {
-        mark: { type: "rule", color: "#a04f3c", strokeDash: [4,4], opacity: 0.7 },
+        mark: { type: "rule", color: cc("secondary"), strokeDash: [4,4], opacity: 0.7 },
         data: { values: [{ y: 80 }] },
         encoding: { y: { field: "y", type: "quantitative" } },
       },
@@ -823,12 +859,12 @@ async function chartToponymRoots() {
     .sort((a, b) => b[1] - a[1])
     .map(([root, n]) => ({ root, n }));
   const spec = {
-    ...VEGA_THEME,
+    ...vegaTheme(),
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: 360,
     data: { values: rows },
-    mark: { type: "bar", color: "#5e2620" },
+    mark: { type: "bar", color: cc("primary") },
     encoding: {
       y: { field: "root", type: "nominal", title: null,
            sort: { field: "n", order: "descending" } },
@@ -852,7 +888,7 @@ const FLOOR_COLS = [
   { key: "shelters",                label: "Albergs" },
 ];
 const FLOOR_DOMAIN = FLOOR_COLS.map(f => f.label);
-const FLOOR_RANGE  = ["#c98455","#a04f3c","#5e2620","#6b4561","#8b6b4f"];
+const floorRange = () => [cc("tan"), cc("secondary"), cc("primary"), cc("plum"), cc("brown")];
 
 async function setupFloorsChart() {
   const sel = document.getElementById("f-floors-group");
@@ -884,12 +920,12 @@ async function chartFloors(mode = "district") {
   const isMany = mode !== "district";
   const groupTitle = isDistrict ? "Partit judicial" : "Municipi";
   const spec = {
-    ...VEGA_THEME,
+    ...vegaTheme(),
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: isMany ? Math.max(360, order.length * 22 + 60) : 320,
     data: { values: rows },
-    mark: { type: "bar", stroke: "#fdf8f1", strokeWidth: 0.5 },
+    mark: { type: "bar", stroke: cc("sep"), strokeWidth: 0.5 },
     encoding: {
       [isMany ? "y" : "x"]: {
         field: "grp", type: "nominal",
@@ -905,7 +941,7 @@ async function chartFloors(mode = "district") {
       },
       color: {
         field: "tipus", type: "nominal", title: null,
-        scale: { domain: FLOOR_DOMAIN, range: FLOOR_RANGE },
+        scale: { domain: FLOOR_DOMAIN, range: floorRange() },
         legend: { orient: "top" },
       },
       order: { field: "tipus", sort: FLOOR_DOMAIN },
