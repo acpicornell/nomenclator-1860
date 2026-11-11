@@ -94,7 +94,7 @@ uv sync   # crea .venv amb tot
 .venv/bin/python db/check_consistency.py
 ```
 
-Quan re-exportis els JSON, recorda bumpar `DATA_V` a `web/app.js` perquè el navegador no serveixi una versió obsoleta.
+Els JSON re-exportats no necessiten cap versió a `web/app.js`: `web/_headers` serveix tots els actius amb `Cache-Control: no-store`, així el navegador sempre demana el deploy més recent.
 
 ## Web
 
@@ -120,15 +120,7 @@ L'única dependència de runtime és Vega-Lite (~800 KB a `web/vendor/`, reprodu
 
 ## Deploy a Cloudflare Workers
 
-El web és pur estàtic — qualsevol hosting CDN serveix, però aquest projecte deploya a [Cloudflare Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/) connectant el repositori de GitHub directament:
-
-1. **dash.cloudflare.com** → Workers & Pages → Create → Workers → Import a repository
-2. Selecciona `acpicornell/nomenclator-1860`
-3. Configuració:
-   - Build command: *(buida)*
-   - Build output directory: `web`
-   - Root directory: `/`
-4. Save and Deploy
+El web és pur estàtic — qualsevol hosting CDN serveix, però aquest projecte deploya a [Cloudflare Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/) des de GitHub Actions. A cada push a `main`, `.github/workflows/deploy.yml` executa `scripts/check_site.py web` i després publica `web/` amb `cloudflare/wrangler-action` (configuració a `wrangler.jsonc`). Cal el secret de repositori `CLOUDFLARE_API_TOKEN`; mentre no hi és, el workflow se salta el deploy i acaba en verd.
 
 El fitxer `web/_headers` configura `Cache-Control: no-store` perquè cada push es reflexi al següent reload, més una CSP raonable (script-src `'self' 'unsafe-eval'` per Vega). Vendor i dades són tots < 1.5 MB, ben per sota del límit de 25 MiB per fitxer de CF Workers.
 

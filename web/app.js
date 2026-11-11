@@ -1,7 +1,7 @@
 // 1860 Nomenclator — static web amb dades JSON pures.
-// No fa servir DuckDB-WASM ni cap dependència externa: tota la lògica
-// de query corre en JavaScript dins el navegador, sobre arrays carregats
-// per fetch() inicial.
+// No fa servir DuckDB-WASM: tota la lògica de query corre en JavaScript
+// dins el navegador, sobre arrays carregats per fetch() inicial. L'única
+// dependència és Vega/Vega-Lite, servit des de web/vendor/ per a les gràfiques.
 
 const PAGE_SIZE = 50;
 
@@ -57,7 +57,7 @@ async function loadData() {
   }
 }
 
-// === HELPERS JS (substitueixen SQL bàsic) ===
+// === HELPERS JS (filtres, agregats i ordenació sobre els arrays) ===
 function distinctSorted(arr, key, filterFn = null) {
   const set = new Set();
   for (const x of arr) {

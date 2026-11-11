@@ -1,46 +1,22 @@
-# Nomenclàtor 1860 — Web estàtica
+# Nomenclàtor 1860 — static site
 
-Explorador local del cens digitalitzat, amb DuckDB-WASM corrent al navegador.
+A single-page site with no build step. `app.js` fetches the JSON files in
+`data/` and runs every filter and aggregate in plain JavaScript; the charts are
+drawn with Vega/Vega-Lite, vendored under `vendor/`.
 
-## Llançar
-
-DuckDB-WASM necessita servir-se per HTTP (no `file://`). Des de l'arrel del projecte:
-
-```bash
-cd web
-python3 -m http.server 8000
-```
-
-Després obre <http://localhost:8000> al navegador.
-
-Alternativament (més simple si tens `uv`):
+Serve it over HTTP (`fetch` does not work from `file://`):
 
 ```bash
-uv run python -m http.server 8000 -d web
+python3 -m http.server 8000 -d web
 ```
 
-## Estructura
+## Layout
 
-- `index.html` — single-page app
-- `style.css` — estil (cream + terracotta, sòbria acadèmica)
-- `app.js` — DuckDB-WASM + UI (mòdul ES, sense frameworks)
-- `data/entries.parquet` (~54 KB) — dades principals
-- `data/notes.parquet` (~6 KB) — notes a peu de pàgina
-- `data/*.parquet` — fonts addicionals (errata, summaries, NGIB, INE, etc.)
+- `index.html` — the page; tabs Inici, Explorar, Estadístiques, Gràfiques, Glossari
+- `app.js` — data loading, filters, tables and chart specs (no framework)
+- `style.css`, `theme.js` — styling and the light/dark toggle
+- `data/*.json` — produced by `scripts/export_json.py` (called by `scripts/rebuild.py`)
+- `vendor/` — Vega, Vega-Lite and vega-embed (`scripts/download_vendor.py`)
+- `_headers` — cache and Content-Security-Policy headers for Cloudflare
 
-## Pestanyes
-
-1. **Explorar** — filtres (població, partit, municipi, classe, km) + taula paginada ordenable
-2. **Estadístiques** — resums precalculats (top municipis, distribució de plantes, etc.)
-3. **Consola SQL** — DuckDB SQL lliure contra les taules `entries` i `notes`
-
-## Re-exportar Parquet després de tocar la BD
-
-```bash
-.venv/bin/python -c "
-import duckdb
-c = duckdb.connect('db/nomenclator.duckdb', read_only=True)
-c.execute(\"COPY entries TO 'web/data/entries.parquet' (FORMAT PARQUET, COMPRESSION ZSTD)\")
-c.execute(\"COPY notes TO 'web/data/notes.parquet' (FORMAT PARQUET, COMPRESSION ZSTD)\")
-"
-```
+See the root `README.md` for the data pipeline and deployment.
