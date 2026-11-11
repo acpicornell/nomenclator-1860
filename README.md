@@ -2,168 +2,68 @@
 
 [![Deploy](https://github.com/acpicornell/nomenclator-1860/actions/workflows/deploy.yml/badge.svg)](https://github.com/acpicornell/nomenclator-1860/actions/workflows/deploy.yml)
 
-Digitalització completa del *Nomenclátor de la Provincia de las Baleares*, redactat el **25 de desembre de 1860** per la Junta General d'Estadística (predecessora de l'INE) sota Alejandro Oliván. És el primer nomenclàtor espanyol amb tabulació a nivell d'edifici.
+A complete digitisation of the *Nomenclátor de la Provincia de las Baleares*,
+drawn up on 25 December 1860 by the Junta General de Estadística — the first
+Spanish gazetteer tabulated down to the building. Every Balearic place declares
+its buildings by use, by number of floors, its shelters and its distance to the
+centre of the municipality; this edition makes that a queryable database and an
+explorable website.
 
-Cada poble balear declara els edificis per ús (habitats permanentment, temporals, inhabitats), per nombre de plantes, més albergs i la distància al centre del municipi. Domini públic per antiguitat.
+**Live site: <https://1860.corpusbalear.org>** — part of
+[Corpus Balear](https://corpusbalear.org), digital editions of Balearic
+historical sources.
 
-🔗 **Demo en directe**: <https://nomenclator-1860.acpicornell.workers.dev>
-📂 **Codi**: <https://github.com/acpicornell/nomenclator-1860>
+## What's in it
 
-| Font | Període | Taules | Files |
-|---|---|---|---|
-| **Nomenclàtor 1860** — *Junta General de Estadística* | 25 desembre 1860 | `entries`, `notes`, `summaries`, `errata` | 3.026 entrades |
+- **3 026 entries** (places and buildings), with the page's footnotes, the four
+  official summary tables of p. 50 and the errata of p. 51.
+- Five judicial districts: Palma, Inca, Manacor, Eivissa, Maó.
+- 100% internal arithmetic coherence; the 15 deviations from printed subtotals
+  (net +11 over 74 107 buildings) are the 1860 printer's own, verified against
+  the facsimile.
+- A website in Catalan with filters, CSV download, statistics, six interactive
+  Vega-Lite charts and a glossary.
 
-## Font primària
+## How it was made
 
-L'obra completa — «*Nomenclátor que comprende las poblaciones, grupos, edificios, viviendas, albergues, etc., de las cuarenta y nueve provincias de España*», editat per la Junta General de Estadística entre 1863-1871, Imprenta de José María Ortiz, Madrid — està digitalitzada per la **Biblioteca Nacional de España** (signatura 2/45404 V.1 - 2/45408 V.5, domini públic, llicència CC-BY 4.0):
+The Balearic pages of the BNE's digitised volumes were extracted page by page
+with Claude Vision, loaded into DuckDB, corrected automatically and by the
+book's own errata, and validated against the printed subtotals and summary
+tables. The output for the web is static JSON, filtered in the browser with no
+database at runtime.
 
-- 📚 **Registre BNE**: [bdh-rd.bne.es/bdh0000167814](http://bdh.bne.es/bnesearch/detalle/bdh0000167814)
-- 📄 [Volum 1 (PDF)](https://bnedigital.bne.es/bd/es/viewer?id=a98dc0b2-620e-436f-ab9b-ed039ee3754c)
-- 📄 [Volum 2 (PDF)](https://bnedigital.bne.es/bd/es/viewer?id=32e3d5d6-2b1a-4aec-a30e-94c7b250b9d6)
-- 📄 [Volum 3 (PDF)](https://bnedigital.bne.es/bd/es/viewer?id=bdc937a9-670d-4990-a06e-572c91b6d15b)
-- 📄 [Volum 4 (PDF)](https://bnedigital.bne.es/bd/es/viewer?id=adfdc195-0261-4907-a632-643804d0a4ce)
-- 📄 [Volum 5 (PDF)](https://bnedigital.bne.es/bd/es/viewer?id=57cd9a43-ac47-4376-a728-9a751cc9ea54)
-
-Les 49 províncies de l'època apareixen disposades alfabèticament a través dels 5 volums. El PDF que digitalitzem aquí (`pdfs/Nomenclàtor 1860 balears.pdf`, no versionat — vegeu `.gitignore`) és l'extracció de les pàgines de la província de Balears.
-
-## Arquitectura
-
-```
-                  db/nomenclator.duckdb       (build-time, local)
-                  ├─ entries          ← una fila per població/edifici
-                  ├─ notes            ← notes a peu d'article
-                  ├─ summaries        ← pàg. 50 (4 quadres-resum)
-                  ├─ errata           ← pàg. 51 (fe d'errates)
-                  └─ source_metadata  ← provenença
-                         │
-                         ▼  scripts/export_json.py
-                  web/data/*.json    (~1.5 MB sense gzip, ~500 KB gzip)
-                         │
-                         ▼
-                  web/  ← HTML + JS pur + Vega-Lite (sense WASM)
-```
-
-La pipeline Python local fa servir DuckDB internament per a extracció,
-validació i ingesta, però l'**output final per al web és JSON estàtic**.
-El runtime web no necessita DuckDB-WASM ni cap altra base de dades: tot
-el filtrat i les agregacions es fan en JavaScript sobre arrays en memòria
-del navegador. Això permet hostatjar la web a qualsevol CDN amb límits
-estrictes (Cloudflare Workers Free, GitHub Pages, S3 estàtic…).
-
-## Requisits
-
-- Python ≥ 3.12 amb [uv](https://docs.astral.sh/uv/)
-- `ANTHROPIC_API_KEY` a `.env` (només si tornes a executar l'extracció del PDF)
+## Run locally
 
 ```bash
-uv sync   # crea .venv amb tot
-```
-
-## Reconstruir la base de dades
-
-### Orquestrador unificat (recomanat)
-
-```bash
-.venv/bin/python scripts/rebuild.py             # tot, excepte vision (car)
-.venv/bin/python scripts/rebuild.py --json      # només re-exportar JSON a web/data/
-.venv/bin/python scripts/rebuild.py --seed      # només estampar metadata
-.venv/bin/python scripts/rebuild.py --include-expensive   # amb Claude vision
-```
-
-`rebuild.py` corre cada pas en l'ordre correcte, reporta timing i row counts, i actualitza `source_metadata`. Al final delega a `scripts/export_json.py` per generar els JSON consumits per la web.
-
-### Passos individuals (debug)
-
-```bash
-# Extracció del PDF (car: Claude vision, ~10 USD)
-.venv/bin/python scripts/extract_with_claude.py --range 4-51
-
-# Càrrega i validació
-.venv/bin/python scripts/load_claude_output.py
-.venv/bin/python db/validate.py
-.venv/bin/python db/validate_rows.py
-
-# Correccions automàtiques
-.venv/bin/python scripts/auto_fix.py --apply
-.venv/bin/python scripts/auto_fix_2.py --apply
-
-# Aplicar fe d'errates + carregar quadres-resum (pàg. 50, 51)
-.venv/bin/python scripts/apply_errata_and_summaries.py
-
-# Comprovacions de consistència
-.venv/bin/python db/check_consistency.py
-```
-
-Els JSON re-exportats no necessiten cap versió a `web/app.js`: `web/_headers` serveix tots els actius amb `Cache-Control: no-store`, així el navegador sempre demana el deploy més recent.
-
-## Web
-
-```bash
+uv sync
+.venv/bin/python scripts/rebuild.py      # everything except the (paid) vision extraction
 cd web && python3 -m http.server 8000
 ```
 
-Obrir <http://localhost:8000>. La pàgina ha de servir-se per HTTP (no `file://`) perquè els JSON es carreguen via `fetch`. Pestanyes:
+Re-running the extraction (`--include-expensive`) needs `ANTHROPIC_API_KEY` in
+`.env`.
 
-1. **Inici** — visió general amb estadístiques principals.
-2. **Explorar** — filtres (població, partit judicial, municipi, classe, distància) sobre una taula paginada i ordenable, amb descàrrega CSV.
-3. **Estadístiques** — agregats per partit, classes més freqüents, distribució per plantes, més els 4 quadres-resum oficials de la pàg. 50.
-4. **Gràfiques** — sis visualitzacions Vega-Lite interactives:
-   1. Donut de classes d'edifici (filtrable per municipi)
-   2. Ocupació HC/HT/Inh per partit o municipi (amb selector)
-   3. Boxplot de distàncies al nucli per classe
-   4. Corba de Pareto de la concentració d'edificis
-   5. Arrels toponímiques més freqüents (Son, Ca'n, Molí, Torre, Venda…)
-   6. Composició arquitectònica per nombre de plantes (amb selector)
-5. **Glossari** — explicació de columnes, classes de població i convencions del text original.
+## Documentation
 
-L'única dependència de runtime és Vega-Lite (~800 KB a `web/vendor/`, reproduïble amb `scripts/download_vendor.py`).
+The documentation is in Catalan.
 
-## Deploy a Cloudflare Workers
+- [docs/DATA.md](docs/DATA.md) — the source (BNE volumes), the `entries`
+  schema, the eight consistency checks with their current state, and the
+  licence as originally stated.
+- [docs/PIPELINE.md](docs/PIPELINE.md) — architecture, requirements, rebuilding
+  the database step by step, the website's tabs, Cloudflare deployment and
+  conventions.
+- [data/SOURCES.md](data/SOURCES.md) — data provenance, licence and recommended
+  attribution.
+- [web/README.md](web/README.md) — the static site.
 
-El web és pur estàtic — qualsevol hosting CDN serveix, però aquest projecte deploya a [Cloudflare Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/) des de GitHub Actions. A cada push a `main`, `.github/workflows/deploy.yml` executa `scripts/check_site.py web` i després publica `web/` amb `cloudflare/wrangler-action` (configuració a `wrangler.jsonc`). Cal el secret de repositori `CLOUDFLARE_API_TOKEN`; mentre no hi és, el workflow se salta el deploy i acaba en verd.
+## Licence and citation
 
-El fitxer `web/_headers` configura `Cache-Control: no-store` perquè cada push es reflexi al següent reload, més una CSP raonable (script-src `'self' 'unsafe-eval'` per Vega). Vendor i dades són tots < 1.5 MB, ben per sota del límit de 25 MiB per fitxer de CF Workers.
+- **Code**: GNU **AGPL-3.0-or-later** — see `LICENSE`.
+- **Data** (`web/data/*.json`): the original source (the 1860 Nomenclátor) is
+  **public domain** by age (over 160 years old, an official State publication
+  predating 1880). See [data/SOURCES.md](data/SOURCES.md) for the recommended
+  attribution.
 
-## Schema
-
-El schema complet és a `db/schema.sql`. Taula principal `entries`:
-
-| Columna | Tipus | Significat |
-|---|---|---|
-| `judicial_district` | TEXT | Palma / Inca / Manacor / Eivissa / Maó |
-| `municipality` | TEXT | Literal del PDF |
-| `place` | TEXT | Població o entitat |
-| `place_class`, `class_normalized` | TEXT | Caserío, Casa de labor, Molino, Iglesia… |
-| `distance_km` | DOUBLE | Distància al centre del municipi |
-| `inhabited_permanent`, `inhabited_seasonal`, `uninhabited` | INT | Per ús |
-| `buildings_1_floor`…`buildings_over_3_floors`, `shelters` | INT | Per construcció |
-| `total` | INT | Suma per fila |
-
-La pàgina 50 del PDF (quadres-resum) es carrega a la BD però s'amaga a la pestanya d'exploració; es mostra a la pestanya *Estadístiques*.
-
-## Comprovacions de consistència
-
-`db/check_consistency.py` executa 8 comprovacions sobre la BD:
-
-- Coherència interna de fila (HC+HT+Inh = P1+P2+P3+PM+Alb = total)
-- Σfiles de municipi vs subtotal imprès
-- Σmunis de partit vs total del partit
-- Σentries vs Quadre 3 pàg. 50
-- Anomalies de NULL i zeros
-- Files duplicades (mateix page+muni+place)
-- Estat de la fe d'errates (8 correccions verificades)
-- Gaps de normalització de `class_normalized`
-
-Estat actual: **100% coherència aritmètica interna** post-fix Ca'n Mena. Les 15 desviacions Σfiles vs subtotal imprès (Δ ∈ [-1, +3], net +11 sobre 74.107 edificis, 0,015%) **són del propi impressor del 1860**, no de la digitalització — tots els subtotals impresos s'han verificat visualment contra el facsímil i coincideixen exactament amb la BD.
-
-## Convencions
-
-- **Identificadors de codi** (taules, columnes, fitxers, variables): **anglès**.
-- **UI web** (textos, etiquetes, comentaris): **català**.
-- **README**: català.
-- **Valors literals** (noms de població, classes com «Caserío»): tal com apareixen a la font.
-
-## Llicència
-
-- **Codi**: GNU **AGPL-3.0-or-later** — vegeu `LICENSE`.
-- **Dades** (`web/data/*.json`): la font original (Nomenclátor de 1860) és **domini públic** per antiguitat (l'obra té més de 160 anys i és una publicació oficial de l'Estat anterior a 1880). Vegeu `data/SOURCES.md` per a l'atribució recomanada.
+The site cites itself as: Picornell Company, A. C. *Nomenclàtor* (1860), edició
+digital. Corpus Balear · 1860.corpusbalear.org
